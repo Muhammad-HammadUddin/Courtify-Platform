@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const FacilitiesGrid = () => {
   const items = [
-    { title: "Indoor & Outdoor", desc: "All-weather indoor turf and open-air outdoor courts." },
+    { title: "Indo & Outdoor", desc: "All-weather indoor turf and open-air outdoor courts." },
     { title: "Premium Turf", desc: "Shock-absorbing, non-slip surfaces for safe, fast play." },
     { title: "LED Lighting", desc: "Even, glare-free illumination for night matches." },
     { title: "Locker Rooms", desc: "Secure lockers, showers, and changing facilities." },
@@ -12,6 +12,8 @@ const FacilitiesGrid = () => {
     { title: "Equipment Rental", desc: "Balls, bibs, cones, and goalkeeper gloves available." },
     { title: "First Aid", desc: "Trained staff and first-aid kits on premises." },
   ]
+
+
 
   return (
     <section className="mx-auto w-full max-w-6xl  mt-10 bg-black">
