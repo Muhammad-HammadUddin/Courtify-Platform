@@ -1,25 +1,54 @@
-from flask import Flask
-from .config import Config
-from .extensions import db, migrate, jwt, mail, cors
+from flask import Flask, jsonify
+from flask_restx import Api, Namespace
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
+from flask_cors import CORS
+from datetime import timedelta
+from dotenv import load_dotenv
+import os
 
-def create_app():
-    app = Flask(__name__, static_folder=None)
-    app.config.from_object(Config)
+load_dotenv()
 
-    # init extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
-    mail.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
 
-    # register blueprints
-    from .auth import auth_bp
-    from .bookings import bookings_bp
-    from .notifications import notifications_bp
+# Flask object renamed to flask_app
+flask_app = Flask(__name__)
+flask_app.config.from_object(Config)
 
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(bookings_bp, url_prefix="/api/bookings")
-    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+# Extensions
+db = SQLAlchemy(flask_app)
+bcrypt = Bcrypt(flask_app)
+migrate = Migrate(flask_app, db)
+jwt = JWTManager(flask_app)
 
-    return app
+
+# Swagger
+authorizations = {"bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+api = Api(flask_app, version="1.0", title="Courtify API", authorizations=authorizations, security="bearer")
+from flask_cors import CORS
+
+CORS(
+    flask_app,
+    supports_credentials=True,             # Allow cookies
+    origins=["http://localhost:5173"],     # Frontend URL
+    allow_headers=["Content-Type", "Authorization"],
+)
+# Test route
+@flask_app.route("/test")
+def test():
+    return {"message": "Flask merged app is running!"}
+
+# Namespace
+users_ns = Namespace("Users", description="User related operations")
+api.add_namespace(users_ns, path="/users")
+
+# Import routes and models
+import app.routes.userRoutes
+import app.models.cf_models
