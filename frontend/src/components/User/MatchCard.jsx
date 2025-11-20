@@ -1,20 +1,27 @@
-"use client";
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 
 export function MatchCard({ match }) {
-  const whatsappUrl = `https://wa.me/${match.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(
-    `Hi! I'm interested in joining your ${match.sport} match at ${match.location}. ${match.message}`
+  // Safe fallback values
+  const whatsappNumber = match.whatsappNumber || match.contact_number || "";
+  const message = match.message || match.match_details || "";
+  const icon = match.icon || "🎯";
+  const sport = match.sport || "Sport";
+  const location = match.location || "Location";
+  const dateTime = match.dateTime || match.date_time || "";
+
+  // Use safe whatsappNumber variable
+  const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(
+    `Hi! I'm interested in joining your ${sport} match at ${location}. ${message}`
   )}`;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 bg-card border border-border">
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 bg-card border border-border rounded-lg">
       {/* Sport Header */}
       <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-white">
-        <div className="text-5xl mb-3">{match.icon}</div>
-        <h3 className="text-2xl font-bold">{match.sport}</h3>
+        <div className="text-5xl mb-3">{icon}</div>
+        <h3 className="text-2xl font-bold">{sport}</h3>
       </div>
 
       {/* Card Content */}
@@ -24,7 +31,7 @@ export function MatchCard({ match }) {
           <span className="text-xl mt-1">📍</span>
           <div>
             <p className="text-sm text-muted-foreground">Location</p>
-            <p className="font-semibold text-foreground">{match.location}</p>
+            <p className="font-semibold text-foreground">{location}</p>
           </div>
         </div>
 
@@ -33,7 +40,7 @@ export function MatchCard({ match }) {
           <span className="text-xl mt-1">🕐</span>
           <div>
             <p className="text-sm text-muted-foreground">Date & Time</p>
-            <p className="font-semibold text-foreground">{match.dateTime}</p>
+            <p className="font-semibold text-foreground">{dateTime}</p>
           </div>
         </div>
 
@@ -42,7 +49,7 @@ export function MatchCard({ match }) {
           <span className="text-xl mt-1">💬</span>
           <div>
             <p className="text-sm text-muted-foreground">Details</p>
-            <p className="font-semibold text-foreground">{match.message}</p>
+            <p className="font-semibold text-foreground">{message}</p>
           </div>
         </div>
 

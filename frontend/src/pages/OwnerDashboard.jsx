@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, Route, Routes, useLocation,Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom";
 import {
   BarChart3,
   PlusCircle,
@@ -7,7 +7,7 @@ import {
   TrendingUp,
   LogOut,
   User,
-  Menu, // <-- Added menu icon
+  Menu,
   X,
 } from "lucide-react";
 
@@ -20,9 +20,6 @@ import {
 } from "../components/ui/dropdown-menu";
 import { Button } from "../components/ui/button";
 
-// Components
-
-
 export default function DashboardLayout() {
   const [ownerName] = useState("John Smith");
   const [activeTab, setActiveTab] = useState("/owner/dashboard");
@@ -30,10 +27,9 @@ export default function DashboardLayout() {
 
   const location = useLocation();
 
-  // Update activeTab automatically when URL changes
   useEffect(() => {
     setActiveTab(location.pathname);
-    setMobileMenuOpen(false); // close mobile menu when navigating
+    setMobileMenuOpen(false);
   }, [location.pathname]);
 
   const navItems = [
@@ -44,16 +40,16 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0f111a] text-white">
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-border shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1c1f33] border-b border-[#2c2f44] shadow-md">
         <div className="px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-primary-foreground" />
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">CourtHub</h1>
+            <h1 className="text-2xl font-bold">CourtHub</h1>
           </div>
 
           {/* Desktop Navigation */}
@@ -61,15 +57,14 @@ export default function DashboardLayout() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.path;
-
               return (
                 <Link
                   key={item.id}
                   to={item.path}
                   className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted"
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:bg-gray-700"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -79,7 +74,7 @@ export default function DashboardLayout() {
             })}
           </div>
 
-          {/* Mobile menu toggle */}
+          {/* Mobile menu toggle & profile */}
           <div className="flex items-center gap-2 md:hidden">
             <Button
               variant="ghost"
@@ -89,24 +84,23 @@ export default function DashboardLayout() {
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
 
-            {/* Profile Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 bg-transparent">
+                <Button variant="outline" className="gap-2 bg-transparent border border-gray-600">
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">{ownerName}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="flex items-center gap-2">
+              <DropdownMenuContent align="end" className="w-48 bg-[#1c1f33] text-white">
+                <DropdownMenuItem className="flex items-center gap-2 hover:bg-gray-700">
                   <User className="w-4 h-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2">
+                <DropdownMenuItem className="flex items-center gap-2 hover:bg-gray-700">
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex items-center gap-2 text-destructive">
+                <DropdownMenuSeparator className="border-gray-600" />
+                <DropdownMenuItem className="flex items-center gap-2 text-red-500 hover:bg-gray-700">
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
                 </DropdownMenuItem>
@@ -115,9 +109,9 @@ export default function DashboardLayout() {
           </div>
         </div>
 
-        {/* Mobile Menu (Dropdown under navbar) */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-border flex flex-col px-4 py-2 shadow-md animate-slideDown">
+          <div className="md:hidden bg-[#1c1f33] border-t border-[#2c2f44] flex flex-col px-4 py-2 shadow-md animate-slideDown">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.path;
@@ -127,8 +121,8 @@ export default function DashboardLayout() {
                   to={item.path}
                   className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted"
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:bg-gray-700"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -142,7 +136,7 @@ export default function DashboardLayout() {
 
       {/* Main content */}
       <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-12">
-       <Outlet/>
+        <Outlet />
       </main>
     </div>
   );

@@ -1,10 +1,12 @@
 from app import db
-from datetime import datetime
+
 from sqlalchemy.dialects.postgresql import ENUM
+from decimal import Decimal
+from datetime import time, datetime
 
 # ENUMS
 user_role_enum = ENUM("user", "admin", "court_owner", name="user_role", create_type=True)
-court_status_enum = ENUM("approved", "rejected", name="court_status", create_type=True)
+court_status_enum = ENUM("approved", "rejected","pending", name="court_status", create_type=True)
 booking_status_enum = ENUM("confirmed", "cancelled", "completed", "pending", name="booking_status", create_type=True)
 payment_method_enum = ENUM("stripe", name="payment_method", create_type=True)
 payment_status_enum = ENUM("pending", "successful", "failed", name="payment_status", create_type=True)
@@ -68,6 +70,28 @@ class Courts(db.Model):
     description = db.Column(db.Text)
     image_url = db.Column(db.String(255))
 
+
+   
+def to_dict(self):
+    def format_time(t):
+        if isinstance(t, (time, datetime)):
+            return t.strftime("%H:%M")  # only hours and minutes
+        return t
+
+    return {
+        "id": self.id,
+        "name": self.name,
+        "location": self.location,
+        "hourly_rate": float(self.hourly_rate) if isinstance(self.hourly_rate, Decimal) else self.hourly_rate,
+        "maintenance": float(self.maintenance) if isinstance(self.maintenance, Decimal) else self.maintenance,
+        "status": self.status,
+        "type": self.type,
+        "opening_time": format_time(self.opening_time),
+        "closing_time": format_time(self.closing_time),
+        "description": self.description,
+        "image_url": self.image_url
+    }
+
     bookings = db.relationship("Bookings", backref="court",
                                cascade="all, delete-orphan", passive_deletes=True)
 
@@ -96,6 +120,15 @@ class Bookings(db.Model):
     remaining_cash = db.Column(db.Numeric(10, 2), nullable=False, default=0.00)
     cancellation_reason = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+    db.UniqueConstraint(
+        'court_id', 
+        'booking_date', 
+        'start_time', 
+        'end_time', 
+        name='unique_slot'
+    ),
+)
 
     payments = db.relationship("Payments", backref="booking",
                                cascade="all, delete-orphan", passive_deletes=True)

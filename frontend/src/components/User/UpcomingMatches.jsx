@@ -1,11 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MatchCard } from "./MatchCard";
 import { MatchForm } from "./MatchForm";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+import { toast } from "react-toastify";
 
+// ------------------------------------
+// Inline Confirm Modal
+// ------------------------------------
+function ConfirmModal({ open, onClose, onConfirm, message }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+        <p className="mb-4 text-lg">{message || "Are you sure?"}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="destructive" onClick={onConfirm}>Confirm</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------
+// UpcomingMatches Component
+// ------------------------------------
 const SPORT_ICONS = {
   Football: "⚽",
   Tennis: "🎾",
@@ -17,56 +42,100 @@ const SPORT_ICONS = {
   Running: "🏃",
 };
 
-function UpcomingMatches() {
-  const [matches, setMatches] = useState([
-    {
-      id: "1",
-      sport: "Football",
-      location: "Central Park, NYC",
-      dateTime: "2025-11-15 10:00 AM",
-      message: "5v5 Friendly Match - Beginners Welcome",
-      whatsappNumber: "+1234567890",
-      icon: SPORT_ICONS.Football,
-    },
-    {
-      id: "2",
-      sport: "Tennis",
-      location: "Riverside Courts, LA",
-      dateTime: "2025-11-16 4:00 PM",
-      message: "Looking for doubles partner",
-      whatsappNumber: "+1987654321",
-      icon: SPORT_ICONS.Tennis,
-    },
-    {
-      id: "3",
-      sport: "Cricket",
-      location: "Sports Complex, SF",
-      dateTime: "2025-11-17 6:00 PM",
-      message: "T20 Match - Players needed",
-      whatsappNumber: "+1555666777",
-      icon: SPORT_ICONS.Cricket,
-    },
-    {
-      id: "4",
-      sport: "Basketball",
-      location: "Downtown Court, Boston",
-      dateTime: "2025-11-14 7:00 PM",
-      message: "Pickup game - all levels",
-      whatsappNumber: "+1222333444",
-      icon: SPORT_ICONS.Basketball,
-    },
-  ]);
-
+export default function UpcomingMatches() {
+  const [matches, setMatches] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddMatch = (newMatch) => {
-    const match = {
-      ...newMatch,
-      id: Date.now().toString(),
-      icon: SPORT_ICONS[newMatch.sport] || "🎯",
-    };
-    setMatches([match, ...matches]);
-    setShowForm(false);
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [matchToDelete, setMatchToDelete] = useState(null);
+
+  // Current user
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // ------------------------------------
+  // Fetch current user
+  // ------------------------------------
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axiosInstance.get("/users/current", { withCredentials: true });
+      setCurrentUserId(res.data.user.id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to get current user");
+    }
+  };
+
+  // ------------------------------------
+  // Fetch matches
+  // ------------------------------------
+  const fetchMatches = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(API_PATH.MatchMaking.GET_MATCHES, { withCredentials: true });
+      setMatches(res.data.matches || []);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch matches");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentUser();
+    fetchMatches();
+  }, []);
+
+  // ------------------------------------
+  // Add new match
+  // ------------------------------------
+  const handleAddMatch = async (matchData) => {
+    try {
+      const res = await axiosInstance.post(API_PATH.MatchMaking.CREATE_MATCH, matchData, {
+        withCredentials: true,
+      });
+      toast.success(res.data.message || "Match created!");
+      setMatches((prev) => [
+        ...prev,
+        { id: res.data.match_id, ...matchData, user_id: currentUserId },
+      ]);
+      setShowForm(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Failed to create match");
+    }
+  };
+
+  // ------------------------------------
+  // Open modal before deletion
+  // ------------------------------------
+  const confirmDeleteMatch = (id) => {
+    setMatchToDelete(id);
+    setModalOpen(true);
+  };
+
+  // ------------------------------------
+  // Delete match after confirming
+  // ------------------------------------
+  const handleDeleteMatch = async () => {
+    if (!matchToDelete) return;
+
+    try {
+      const res = await axiosInstance.delete(
+        API_PATH.MatchMaking.DELETE_MATCH(matchToDelete),
+        { withCredentials: true }
+      );
+      toast.success(res.data.message || "Match deleted");
+      setMatches((prev) => prev.filter((m) => m.id !== matchToDelete));
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Failed to delete match");
+    } finally {
+      setModalOpen(false);
+      setMatchToDelete(null);
+    }
   };
 
   return (
@@ -106,23 +175,45 @@ function UpcomingMatches() {
 
       {/* Matches Grid */}
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matches.length > 0 ? (
-            matches.map((match) => <MatchCard key={match.id} match={match} />)
-          ) : (
-            <div className="text-center py-12 col-span-full">
-              <p className="text-xl text-muted-foreground mb-4">
-                No matches posted yet. Be the first to post!
-              </p>
-              <Button onClick={() => setShowForm(true)} variant="outline" size="lg">
-                Post a Match
-              </Button>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">Loading matches...</div>
+        ) : matches.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {matches.map((match) => (
+              <div key={match.id} className="relative">
+                <MatchCard match={match} />
+                {match.user_id === currentUserId && (
+                  <Button
+                    onClick={() => confirmDeleteMatch(match.id)}
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-2 right-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-xl text-muted-foreground mb-4">
+              No matches posted yet. Be the first to post!
+            </p>
+            <Button onClick={() => setShowForm(true)} variant="outline" size="lg">
+              Post a Match
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleDeleteMatch}
+        message="Are you sure you want to delete this match?"
+      />
     </div>
   );
 }
-
-export default UpcomingMatches;

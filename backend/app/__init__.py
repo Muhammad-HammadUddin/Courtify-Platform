@@ -18,7 +18,15 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
 
-# Flask object renamed to flask_app
+    # --------------------------
+    # JWT COOKIE SETTINGS
+    # --------------------------
+    JWT_TOKEN_LOCATION = ["cookies"]              # Look for JWT in cookies
+    JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
+    JWT_COOKIE_SECURE = False                     # False for dev, True for prod
+    JWT_COOKIE_SAMESITE = "Lax"                   # 'Strict' / 'None' / 'Lax'
+    JWT_COOKIE_CSRF_PROTECT = False
+# Flask app object
 flask_app = Flask(__name__)
 flask_app.config.from_object(Config)
 
@@ -28,27 +36,48 @@ bcrypt = Bcrypt(flask_app)
 migrate = Migrate(flask_app, db)
 jwt = JWTManager(flask_app)
 
-
 # Swagger
 authorizations = {"bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
-api = Api(flask_app, version="1.0", title="Courtify API", authorizations=authorizations, security="bearer")
-from flask_cors import CORS
+api = Api(
+    flask_app,
+    version="1.0",
+    title="Courtify API",
+    authorizations=authorizations,
+    security="bearer"
+)
 
+# CORS
 CORS(
     flask_app,
     supports_credentials=True,             # Allow cookies
-    origins=["http://localhost:5173"],     # Frontend URL
+    origins=["http://localhost:5173","http://127.0.0.1:5173"],     # Frontend URL
     allow_headers=["Content-Type", "Authorization"],
 )
+
 # Test route
 @flask_app.route("/test")
 def test():
     return {"message": "Flask merged app is running!"}
 
-# Namespace
+# Namespaces
 users_ns = Namespace("Users", description="User related operations")
+courts_ns = Namespace("Courts", description="Court related operations")
+matches_ns = Namespace("Matchmaking", description="Matchmaking related operations")
+favs_ns = Namespace("Favorites", description="Favorites related operations")
+bookings_ns= Namespace("Bookings",description="Bookings related operations")
+
+
 api.add_namespace(users_ns, path="/users")
+api.add_namespace(courts_ns, path="/courts")
+api.add_namespace(matches_ns, path="/matchmaking")
+api.add_namespace(favs_ns, path="/favs")
+api.add_namespace(bookings_ns, path="/bookings")
+
 
 # Import routes and models
 import app.routes.userRoutes
+import app.routes.courtsRoutes
 import app.models.cf_models
+import app.routes.matchMakingRoutes
+import app.routes.favoritesRoutes
+import app.routes.bookingRoutes

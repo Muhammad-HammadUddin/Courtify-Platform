@@ -43,9 +43,9 @@ export default function AuthPage() {
           password
         },{withCredentials: true});
         console.log(res.data)
-
-        // localStorage.setItem('token', res.data.token);
-        // toast.success('Login successful!');
+        
+        localStorage.setItem('token', res.data.user.token);
+        toast.success('Login successful!');
 
         // role comes from backend, assuming response has user.role
         const userRole = res.data.user.role;

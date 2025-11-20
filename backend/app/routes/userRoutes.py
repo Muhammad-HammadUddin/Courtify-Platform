@@ -1,10 +1,15 @@
 from app import users_ns, db, bcrypt
-from flask import request
+from flask import request, jsonify, Response,json
 from flask_restx import Resource
 from app.fields.usersFields import users_data
 from app.models.cf_models import Users
-from app.helpers.security_helper import generate_jwt, jwt_required
-from flask import make_response,jsonify,Response,json
+from flask_jwt_extended import create_access_token, set_access_cookies, jwt_required, get_jwt_identity, get_jwt
+from datetime import timedelta
+
+# --------------------------
+# LOGIN ROUTE
+# --------------------------
+
 @users_ns.route("/login")
 class LoginUser(Resource):
     @users_ns.doc('login a user')
@@ -16,75 +21,77 @@ class LoginUser(Resource):
 
         user = Users.query.filter_by(email=email).first()
         if user and bcrypt.check_password_hash(user.password_hash, password):
-            token = generate_jwt(user.id, user.username, user.role)
+            # Generate JWT
+            access_token = create_access_token(
+                identity=str (user.id),
+                additional_claims={"role": user.role},
+                expires_delta=timedelta(hours=24)
+            )
 
             # Prepare JSON data manually
-            data = {
+            response_data = {
                 "status": "success",
                 "user": {
                     "id": user.id,
                     "username": user.username,
                     "email": user.email,
-                    "role": user.role
+                    "role": user.role,
+                    "token": access_token
                 }
             }
 
             # Create Response object manually
             response = Response(
-                response=json.dumps(data),
+                response=json.dumps(response_data),
                 status=200,
                 mimetype='application/json'
             )
 
             # Set HTTP-only cookie
             response.set_cookie(
-                "access_token",
-                token,
+                "access_token_cookie",  # must match JWT config
+                access_token,
                 httponly=True,
-                secure=False,
-                samesite="Lax",
-                max_age=24*3600
+                secure=True,   # True in production with HTTPS
+                samesite="None",
+                max_age=24*3600,
+                path="/"
             )
 
             return response
         
         else:
-            return {"status": "error", "message": "Invalid credentials"}, 401
-
+            error_response = Response(
+                response=json.dumps({"status": "error", "message": "Invalid credentials"}),
+                status=401,
+                mimetype='application/json'
+            )
+            return error_response
+# --------------------------
+# LOGOUT ROUTE
+# --------------------------
 @users_ns.route('/logout')
 class UserLogout(Resource):
     @users_ns.doc('logout a user')
-    @jwt_required
+    @jwt_required()  # parentheses required
     def post(self):
-        # Create a response manually
-        response = Response(
-            response=json.dumps({"status": "success", "message": "Logged out successfully"}),
-            status=200,
-            mimetype='application/json'
-        )
+        response = jsonify({"status": "success", "message": "Logged out successfully"})
+        # Clear the cookie
+        response.delete_cookie("access_token_cookie")
+        return response, 200
 
-        # Clear the cookie by setting max_age=0
-        response.set_cookie(
-            "access_token",
-            "",
-            httponly=True,
-            secure=False,  # production me True karo
-            samesite="Lax",
-            max_age=0
-        )
-
-        return response
-
-
-
+# --------------------------
+# REGISTER ROUTE
+# --------------------------
 @users_ns.route('/register')
 class RegisterUser(Resource):
     @users_ns.doc('register a new user')
     @users_ns.expect(users_data)
     def post(self):
         try:
-            data = request.get_json()
+            data = request.get_json() or {}
 
+            # Validation
             if not data.get("username"):
                 return {"status": "error", "message": "Username is required"}, 400
             if not data.get("email"):
@@ -100,8 +107,7 @@ class RegisterUser(Resource):
             if existing_user:
                 return {"status": "error", "message": "Email already registered"}, 400
 
-            hashed_password = bcrypt.generate_password_hash(
-                data["password"]).decode('utf-8')
+            hashed_password = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
 
             new_user = Users(
                 username=data["username"],
@@ -125,8 +131,26 @@ class RegisterUser(Resource):
             }, 201
 
         except Exception as e:
+            db.session.rollback()
             return {"status": "error", "message": str(e)}, 500
+        
 
+@users_ns.route('/current')
+class CurrentUser(Resource):
+    @users_ns.doc('current user')
+    @jwt_required()  
+    def get(self):
+        user_id = get_jwt_identity()
+        user = Users.query.get(user_id)
+        if not user:
+            return {"status": "error", "message": "User not found"}, 404
 
-
-
+        return {
+            "status": "success",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role
+            }
+        }, 200

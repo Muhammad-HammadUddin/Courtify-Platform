@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, Routes, Route, useLocation,Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom";
 import Header from "../components/User/Header.jsx";
-
+import axiosInstance from "../utils/axios.js"; // make sure your axiosInstance is imported
 
 export default function UserDashboardLayout() {
   const [activeTab, setActiveTab] = useState("/user/dashboard/search");
@@ -12,6 +12,17 @@ export default function UserDashboardLayout() {
     setActiveTab(location.pathname);
   }, [location.pathname]);
 
+  // Fire the API call directly
+  useEffect(() => {
+    
+
+    const res = axiosInstance
+      .get("/courts/all", { withCredentials: true })
+      .then((response) => console.log("API response:", response.data))
+      .catch((err) => console.error("API error:", err));
+  }, []);
+
+
   const tabs = [
     { id: "search", label: "Search Courts", icon: "🔍", path: "/user/dashboard/search" },
     { id: "matches", label: "Upcoming Matches", icon: "⚽", path: "/user/dashboard/matches" },
@@ -21,10 +32,8 @@ export default function UserDashboardLayout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
       <Header />
 
-      {/* Tab Navigation */}
       <div className="sticky top-16 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1 overflow-x-auto">
@@ -46,9 +55,8 @@ export default function UserDashboardLayout() {
         </div>
       </div>
 
-      {/* Tab Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-       <Outlet/>
+        <Outlet />
       </main>
     </div>
   );

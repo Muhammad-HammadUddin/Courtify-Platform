@@ -1,95 +1,110 @@
-import React, { useState } from "react";
-import CourtCard from "./CourtCard.jsx"; // Make sure this path matches your file name
-
-const mockCourts = [
-  {
-    id: 1,
-    name: "Green Valley Football Court",
-    location: "Downtown, City Center",
-    rating: 4.8,
-    reviews: 124,
-    price: "$25/hour",
-    image: "/football-court.jpg",
-    sport: "Football",
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Badminton Arena Pro",
-    location: "North District",
-    rating: 4.6,
-    reviews: 89,
-    price: "$15/hour",
-    image: "/badminton-court.png",
-    sport: "Badminton",
-    available: true,
-  },
-  {
-    id: 3,
-    name: "Tennis Paradise",
-    location: "West End",
-    rating: 4.9,
-    reviews: 156,
-    price: "$30/hour",
-    image: "/outdoor-tennis-court.png",
-    sport: "Tennis",
-    available: false,
-  },
-  {
-    id: 4,
-    name: "Basketball Hub",
-    location: "Sports Complex",
-    rating: 4.7,
-    reviews: 102,
-    price: "$20/hour",
-    image: "/outdoor-basketball-court.png",
-    sport: "Basketball",
-    available: true,
-  },
-  {
-    id: 5,
-    name: "Volleyball Court Elite",
-    location: "Beach Area",
-    rating: 4.5,
-    reviews: 67,
-    price: "$18/hour",
-    image: "/outdoor-volleyball-court.png",
-    sport: "Volleyball",
-    available: true,
-  },
-  {
-    id: 6,
-    name: "Cricket Ground Premium",
-    location: "Outskirts",
-    rating: 4.8,
-    reviews: 143,
-    price: "$35/hour",
-    image: "/cricket-ground.jpg",
-    sport: "Cricket",
-    available: true,
-  },
-];
+import React, { useState, useEffect } from "react";
+import CourtCard from "./CourtCard.jsx";
+import axiosInstance from "@/utils/axios.js";
+import { toast } from "react-toastify";
+import { API_PATH } from "@/utils/apiPath.js";
 
 export default function SearchCourts() {
+  const [courts, setCourts] = useState([]);
+  const [favourites, setFavourites] = useState([]); // ⭐ NEW
+  const [loading, setLoading] = useState(true);
+  const [favLoading, setFavLoading] = useState(false); // ⭐ NEW
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSport, setSelectedSport] = useState("all");
 
-  const sports = [
-    "all",
-    "Football",
-    "Badminton",
-    "Tennis",
-    "Basketball",
-    "Volleyball",
-    "Cricket",
-  ];
+  const sports = ["all", "Football", "Badminton", "Tennis", "Basketball", "Volleyball", "Cricket"];
 
-  const filteredCourts = mockCourts.filter((court) => {
+  // -----------------------------
+  // Fetch COURTS
+  // -----------------------------
+  const fetchCourts = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, {
+        withCredentials: true,
+      });
+      setCourts(res.data.courts || []);
+    } catch (err) {
+      toast.error("Failed to fetch courts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -----------------------------
+  // Fetch FAVOURITES
+  // -----------------------------
+  const fetchFavourites = async () => {
+    try {
+      setFavLoading(true);
+      const res = await axiosInstance.get(API_PATH.FAVOURITES.GET_FAVOURITES, {
+        withCredentials: true,
+      });
+      setFavourites(res.data.favourites || []);
+    } catch (err) {
+      console.log("Fav fetch error:", err);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  // -----------------------------
+  // Add favourite
+  // -----------------------------
+  const addFavourite = async (court_id) => {
+    try {
+      await axiosInstance.post(
+        API_PATH.FAVOURITES.ADD_FAVOURITE,
+        { court_id },
+        { withCredentials: true }
+      );
+
+      fetchFavourites(); // refresh fav list
+      toast.success("Added to favourites");
+    } catch (err) {
+      toast.error("Failed to add favourite");
+    }
+  };
+
+  // -----------------------------
+  // Remove favourite
+  // -----------------------------
+  const removeFavourite = async (court_id) => {
+    try {
+      const fav = favourites.find((f) => f.court_id === court_id);
+      if (!fav) return;
+
+      await axiosInstance.delete(API_PATH.FAVOURITES.REMOVE_FAVOURITE(court_id), {
+        withCredentials: true,
+      });
+
+      fetchFavourites();
+      toast.success("Removed from favourites");
+    } catch (err) {
+      toast.error("Failed to remove favourite");
+    }
+  };
+
+  // -----------------------------
+  // Load everything initially
+  // -----------------------------
+  useEffect(() => {
+    fetchCourts();
+    fetchFavourites();
+  }, []);
+
+  // -----------------------------
+  // Filter courts
+  // -----------------------------
+  const filteredCourts = courts.filter((court) => {
     const matchesSearch =
       court.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       court.location.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesSport =
-      selectedSport === "all" || court.sport === selectedSport;
+      selectedSport === "all" ||
+      court.type.toLowerCase() === selectedSport.toLowerCase();
+
     return matchesSearch && matchesSport;
   });
 
@@ -103,10 +118,12 @@ export default function SearchCourts() {
             placeholder="Search courts by name, location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 pl-10 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-3 pl-10 bg-white border border-slate-300 rounded-lg 
+                       focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
           <span className="absolute left-3 top-3.5 text-slate-400">🔍</span>
         </div>
+
         <button className="px-6 py-3 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 font-medium text-slate-700 transition-colors">
           🎛️ Filter
         </button>
@@ -130,17 +147,27 @@ export default function SearchCourts() {
       </div>
 
       {/* Courts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCourts.map((court) => (
-          <CourtCard key={court.id} court={court} />
-        ))}
-      </div>
+      {loading || favLoading ? (
+        <div className="text-center py-12 text-slate-500">Loading courts...</div>
+      ) : filteredCourts.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourts.map((court) => {
+            const isFav = favourites.some((f) => f.court_id === court.id);
 
-      {filteredCourts.length === 0 && (
+            return (
+              <CourtCard
+                key={court.id}
+                court={court}
+                isFav={isFav}
+                onAddFavourite={() => addFavourite(court.id)}
+                onRemoveFavourite={() => removeFavourite(court.id)}
+              />
+            );
+          })}
+        </div>
+      ) : (
         <div className="text-center py-12">
-          <p className="text-slate-500 text-lg">
-            No courts found matching your search.
-          </p>
+          <p className="text-slate-500 text-lg">No courts found matching your search.</p>
         </div>
       )}
     </div>
