@@ -1,11 +1,15 @@
-from app import users_ns, db, bcrypt
+from app import users_ns, db, bcrypt,mail
 from flask import request, jsonify, Response,json
 from flask_restx import Resource
 from app.fields.usersFields import users_data
 from app.models.cf_models import Users
 from flask_jwt_extended import create_access_token, set_access_cookies, jwt_required, get_jwt_identity, get_jwt
 from datetime import timedelta
+from dotenv import load_dotenv
+from flask_mail import Mail,Message
+import os
 
+load_dotenv()
 # --------------------------
 # LOGIN ROUTE
 # --------------------------
@@ -27,6 +31,7 @@ class LoginUser(Resource):
                 additional_claims={"role": user.role},
                 expires_delta=timedelta(hours=24)
             )
+
 
             # Prepare JSON data manually
             response_data = {
@@ -118,6 +123,9 @@ class RegisterUser(Resource):
 
             db.session.add(new_user)
             db.session.commit()
+            msg=Message(subject="Welcome to Courtify",sender=os.getenv("DEL_EMAIL"),recipients=[new_user.email])
+            msg.body=f"Hello {new_user.username},\n\nThank you for registering at Courtify! We're excited to have you on board.\n\nBest regards,\nCourtify Team"
+            mail.send(msg)
 
             return {
                 "status": "success",
@@ -134,6 +142,7 @@ class RegisterUser(Resource):
             db.session.rollback()
             return {"status": "error", "message": str(e)}, 500
         
+        
 
 @users_ns.route('/current')
 class CurrentUser(Resource):
@@ -141,7 +150,7 @@ class CurrentUser(Resource):
     @jwt_required()  
     def get(self):
         user_id = get_jwt_identity()
-        user = Users.query.get(user_id)
+        user = Users.query.get(int(user_id))
         if not user:
             return {"status": "error", "message": "User not found"}, 404
 

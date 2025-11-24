@@ -1,5 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+import { toast } from "react-toastify";
 
 export default function CourtCard({
   court,
@@ -9,7 +13,57 @@ export default function CourtCard({
 }) {
   const canBook = !court.maintenance;
 
-  // Handle heart click
+  const [rating, setRating] = useState(0); // current user rating
+  const [hoverRating, setHoverRating] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(court.average_rating || 0);
+  const [reviewsCount, setReviewsCount] = useState(court.reviews?.length || 0);
+
+  // Fetch current user's rating for this court
+  const fetchMyRating = async () => {
+    try {
+      const res = await axiosInstance.get(API_PATH.REVIEWS.MY_REVIEWS, { withCredentials: true });
+      const myCourtReview = res.data.reviews.find(r => r.court_id === court.id);
+      if (myCourtReview && myCourtReview.rating) setRating(myCourtReview.rating);
+    } catch (err) {
+      console.log("Error fetching rating", err);
+    }
+  };
+
+  // Fetch average rating from backend
+  const fetchAverageRating = async () => {
+    try {
+      const res = await axiosInstance.get(API_PATH.REVIEWS.BY_COURT(court.id), { withCredentials: true });
+      setAverageRating(res.data.average_rating || 0);
+      setReviewsCount(res.data.reviews?.length || 0);
+    } catch (err) {
+      console.log("Error fetching average rating", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyRating();
+    fetchAverageRating();
+  }, []);
+
+  const handleRate = async (rate) => {
+    try {
+      setLoading(true);
+      await axiosInstance.post(
+        API_PATH.REVIEWS.GIVE_RATING,
+        { court_id: court.id, rating: rate },
+        { withCredentials: true }
+      );
+      setRating(rate);
+      toast.success(`You rated ${court.name} ${rate} ⭐`);
+      fetchAverageRating(); // update average after rating
+    } catch (err) {
+      toast.error("Failed to submit rating");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFavouriteClick = () => {
     if (isFav) {
       onRemoveFavourite?.();
@@ -53,19 +107,32 @@ export default function CourtCard({
           📍 {court.location || "Location not available"}
         </p>
 
-        {/* Description */}
         {court.description && (
           <p className="text-slate-500 text-sm">{court.description}</p>
         )}
 
-        {/* Rating & Reviews */}
-        {court.rating != null && (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="text-yellow-400">⭐</span>
-            <span className="font-semibold">{court.rating}</span>
-            {court.reviews != null && <span>({court.reviews} reviews)</span>}
-          </div>
-        )}
+        {/* Current User Rating */}
+        <div className="flex items-center gap-1">
+          {[1,2,3,4,5].map(star => (
+            <Star
+              key={star}
+              className={`w-5 h-5 cursor-pointer ${
+                (hoverRating || rating) >= star ? "text-yellow-400" : "text-gray-300"
+              }`}
+              onMouseEnter={() => setHoverRating(star)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => handleRate(star)}
+            />
+          ))}
+          {loading && <span className="text-sm text-slate-500 ml-2">Saving...</span>}
+        </div>
+
+        {/* Average Rating Display */}
+        <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
+          <span className="text-yellow-400">⭐</span>
+          <span className="font-semibold">{averageRating}</span>
+          {reviewsCount > 0 && <span>({reviewsCount} reviews)</span>}
+        </div>
 
         {/* Price and Book Button */}
         <div className="flex items-center justify-between mt-2">
@@ -84,7 +151,6 @@ export default function CourtCard({
           </button>
         </div>
 
-        {/* Opening & Closing Time */}
         <div className="flex justify-between text-sm text-slate-500 mt-1">
           <span>Open: {court.opening_time || "-"}</span>
           <span>Close: {court.closing_time || "-"}</span>

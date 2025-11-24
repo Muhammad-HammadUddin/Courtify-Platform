@@ -1,184 +1,232 @@
-import { API_PATH } from "@/utils/apiPath";
-import axiosInstance from "@/utils/axios";
-import React, { useEffect, useState } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { motion, AnimatePresence } from "framer-motion";
+"use client";
 
-export default function MyBookings() {
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+import { checkUserRole } from "@/utils/auth";
+
+import { toast } from "react-toastify";
+import { Loader2, Calendar, Clock, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+ 
+const MyBookings = () => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancelData, setCancelData] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+   // reason state
+  useEffect(()=>{
+    
+
+    checkUserRole("user", navigate, setLoading);
+
+  
+
+  },[navigate])
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   const fetchBookings = async () => {
     try {
-      const response = await axiosInstance.get(API_PATH.BOOKINGS.GET_BOOKINGS_BY_USER, { withCredentials: true });
-      setBookings(response.data.bookings);
-      console.log(response.data.bookings)
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-      toast.error("Failed to fetch bookings");
+      const res = await axiosInstance.get(API_PATH.BOOKINGS.GET_BOOKINGS_BY_USER, {
+        withCredentials: true,
+      });
+      setBookings(res.data.bookings || []);
+    } catch (e) {
+      toast.error("Could not load bookings");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const handlePayAdvance = async (booking) => {
+    try {
+      const res = await axiosInstance.post(
+        API_PATH.PAYMENTS.CREATE,
+        {
+          booking_id: booking.id,
+          court_name: booking.court_name || booking.court.name,
+          amount: 500,
+          currency: "PKR",
+          payment_method: "card",
+        },
+        { withCredentials: true }
+      );
 
-  const handleCancelClick = (booking) => {
-    setSelectedBooking(booking);
-    setCancellationReason("");
-    setCancelModalOpen(true);
+      if (res.data.url) window.location.href = res.data.url;
+      else toast.error("Payment URL not found");
+    } catch (err) {
+      toast.error("Payment failed");
+    }
   };
 
   const handleConfirmCancel = async () => {
-    if (!cancellationReason.trim()) {
-      toast.warn("Please enter a cancellation reason");
+    if (!cancelReason.trim()) {
+      toast.error("Please enter a reason for cancellation");
       return;
     }
 
     try {
+      console.log(cancelData.id)
       await axiosInstance.put(
-        API_PATH.BOOKINGS.CANCEL_BOOKING(selectedBooking.id),
-        { cancellation_reason: cancellationReason },
+        API_PATH.BOOKINGS.CANCEL_BOOKING(cancelData.id),
+        { cancellation_reason: cancelReason }, // send reason
         { withCredentials: true }
       );
-
-      toast.success("Booking cancelled successfully");
-      setCancelModalOpen(false);
-      setSelectedBooking(null);
-      fetchBookings(); // Refetch bookings to get updated status & reason
-    } catch (err) {
-      console.error(err);
+      toast.success("Booking cancelled");
+      fetchBookings();
+    } catch {
       toast.error("Failed to cancel booking");
+    } finally {
+      setCancelData(null);
+      setCancelReason("");
     }
   };
 
-  if (loading) return <p className="text-center py-12">Loading bookings...</p>;
+  if (loading)
+    return (
+      <div className="w-full flex justify-center py-20">
+        <Loader2 className="animate-spin h-10 w-10 text-gray-600" />
+      </div>
+    );
 
   return (
-    <div className="space-y-4 p-6">
-      <ToastContainer position="top-right" autoClose={3000} />
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <h1 className="text-3xl font-bold text-slate-900">My Bookings</h1>
 
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">My Bookings</h2>
+      {bookings.length === 0 ? (
+        <p className="text-gray-500 text-lg">No bookings yet.</p>
+      ) : (
+        <div className="grid gap-6">
+          {bookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="p-5 bg-white shadow hover:shadow-lg border rounded-2xl transition-all duration-300"
+            >
+              <h2 className="text-2xl font-semibold text-slate-900">
+                {booking.court_name || booking.court?.name}
+              </h2>
 
-      {bookings.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-slate-500 text-lg">No bookings yet. Start booking courts now!</p>
+              <div className="flex items-center gap-4 mt-2 text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span>{booking.booking_date}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span>
+                    {booking.start_time} - {booking.end_time}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <span
+                  className={`px-3 py-1 text-sm rounded-full font-semibold ${
+                    booking.booking_status === "pending"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : booking.booking_status === "approved"
+                      ? "bg-blue-100 text-blue-700"
+                      : booking.booking_status === "confirmed"
+                      ? "bg-green-100 text-green-700"
+                      : booking.booking_status === "cancelled"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {booking.booking_status === "pending"
+                    ? "Pending"
+                    : booking.booking_status === "approved"
+                    ? "Awaiting Advance Payment"
+                    : booking.booking_status === "confirmed"
+                    ? "Advance Paid ✔"
+                    : booking.booking_status === "cancelled"
+                    ? "Cancelled"
+                    : "Unknown"}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-1">
+                <p className="font-semibold text-gray-800 flex items-center gap-1">
+                  <CreditCard className="w-4 h-4 text-green-600" />
+                  Total: Rs {booking.total_amount || booking.amount}
+                </p>
+                {(booking.booking_status === "approved" ||
+                  booking.booking_status === "confirmed") && (
+                  <p className="text-gray-700 font-medium">
+                    Remaining Cash: Rs {booking.remaining_cash ?? "0"}
+                  </p>
+                )}
+              </div>
+
+              {booking.booking_status === "approved" && (
+                <div className="flex gap-3 mt-4">
+                  <button
+                    className="flex-1 bg-blue-50 text-blue-700 py-2 rounded-lg font-semibold hover:bg-blue-100 transition shadow-sm"
+                    onClick={() => handlePayAdvance(booking)}
+                  >
+                    Pay Advance
+                  </button>
+                  <button
+                    className="flex-1 bg-red-50 text-red-700 py-2 rounded-lg font-semibold hover:bg-red-100 transition shadow-sm"
+
+                    onClick={() => setCancelData(booking)}
+                  >
+                    Cancel Booking
+                  </button>
+                </div>
+              )}
+
+              {booking.booking_status === "confirmed" && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-semibold flex items-center gap-2">
+                  ✔ Advance Payment Received — Your booking is confirmed.
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      {bookings.map((booking) => (
-  <div
-    key={booking.id}
-    className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
-  >
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex-1">
-        <h3 className="text-lg font-bold text-slate-900 mb-1">{booking.court.name}</h3>
-        <p className="text-slate-500 text-sm mb-2">{booking.court.location}</p>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-slate-500">Date & Time</p>
-            <p className="font-semibold text-slate-900">📅 {booking.booking_date}</p>
-            <p className="font-semibold text-slate-900">🕐 {booking.start_time} - {booking.end_time}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Duration</p>
-            <p className="font-semibold text-slate-900">⏱️ 1 hour</p>
-            <p className="text-green-600 font-bold text-lg mt-1">Total: {booking.total_amount}</p>
-            <p className="text-blue-600 font-semibold mt-1">Remaining: {booking.remaining_cash}</p>
-            {booking.cancellation_reason && (
-              <p className="text-red-600 text-sm mt-1">Reason: {booking.cancellation_reason}</p>
-            )}
+      {/* CANCEL MODAL */}
+      {cancelData && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl w-80 shadow-xl animate-slide-up">
+            <h2 className="text-lg font-bold mb-2">Cancel Booking?</h2>
+            <p className="text-gray-600 mb-2">
+              Are you sure you want to cancel this booking?
+            </p>
+
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason for cancellation..."
+              className="w-full border rounded-lg p-2 mb-4 text-sm"
+            />
+
+            <div className="flex gap-3">
+              <button
+                className="flex-1 bg-gray-200 py-2 rounded-lg font-semibold hover:bg-gray-300"
+                onClick={() => {
+                  setCancelData(null);
+                  setCancelReason("");
+                }}
+              >
+                No
+              </button>
+              <button
+                className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700"
+                onClick={handleConfirmCancel}
+              >
+                Yes, Cancel
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 ${
-          booking.booking_status === "confirmed"
-            ? "bg-green-100 text-green-700"
-            : booking.booking_status === "cancelled"
-            ? "bg-red-100 text-red-700"
-            : "bg-yellow-100 text-yellow-700"
-        }`}
-      >
-        {booking.booking_status === "confirmed"
-          ? "✓ Confirmed"
-          : booking.booking_status === "cancelled"
-          ? "✖ Cancelled"
-          : "⏳ Pending"}
-      </span>
-    </div>
-
-    {/* Buttons hidden if cancelled */}
-    {booking.booking_status !== "cancelled" && (
-      <div className="flex gap-3">
-        <button className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors">
-          Pay Advance
-        </button>
-        <button
-          className="flex-1 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors"
-          onClick={() => handleCancelClick(booking)}
-        >
-          Cancel Booking
-        </button>
-      </div>
-    )}
-  </div>
-))}
-
-
-      {/* Cancellation Modal */}
-      <AnimatePresence>
-        {cancelModalOpen && selectedBooking && (
-          <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border-t-4 border-red-500"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-            >
-              <h2 className="text-2xl font-bold mb-3 text-red-600">Cancel Booking</h2>
-              <p className="mb-2 text-gray-700">
-                Court: <span className="font-medium">{selectedBooking.court.name}</span><br/>
-                Date: <span className="font-medium">{selectedBooking.booking_date}</span><br/>
-                Time: <span className="font-medium">{selectedBooking.start_time} - {selectedBooking.end_time}</span>
-              </p>
-              <textarea
-                className="w-full border rounded-lg p-2 mb-4"
-                placeholder="Enter cancellation reason"
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-              />
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={handleConfirmCancel}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all"
-                >
-                  Confirm Cancel
-                </button>
-                <button
-                  onClick={() => setCancelModalOpen(false)}
-                  className="px-4 py-2 border rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      )}
     </div>
   );
-}
+};
+
+export default MyBookings;

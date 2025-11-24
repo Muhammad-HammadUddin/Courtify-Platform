@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // adjust path
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardStats from "@/components/Admin/DashboardStats";
 import AllCourts from "@/components/Admin/AllCourts";
 import AdminApprovals from "@/components/Admin/Approval";
 import AllUsers from "@/components/Admin/AllUsers";
- // adjust path
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("courts");
@@ -18,13 +17,13 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground mt-2">Manage courts, approvals, and users</p>
         </div>
 
-        {/* Dashboard Stats Section */}
+        {/* Dashboard Stats */}
         <div className="px-6 py-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Dashboard Stats</h2>
           <DashboardStats />
         </div>
 
-        {/* Tabs Navigation */}
+        {/* Tabs */}
         <div className="px-6 py-8 border-t border-border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-card border border-border p-1">
@@ -48,7 +47,6 @@ export default function AdminDashboard() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Tab Contents */}
             <div className="mt-8">
               <TabsContent value="courts">
                 <AllCourts />

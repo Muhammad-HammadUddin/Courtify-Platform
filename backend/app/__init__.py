@@ -6,8 +6,10 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from datetime import timedelta
+from flask_mail import Mail,Message
 from dotenv import load_dotenv
 import os
+import stripe
 
 load_dotenv()
 
@@ -30,11 +32,22 @@ class Config:
 flask_app = Flask(__name__)
 flask_app.config.from_object(Config)
 
+
 # Extensions
 db = SQLAlchemy(flask_app)
 bcrypt = Bcrypt(flask_app)
 migrate = Migrate(flask_app, db)
 jwt = JWTManager(flask_app)
+
+flask_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+flask_app.config['MAIL_PORT'] =587
+flask_app.config['MAIL_USE_TLS'] =True
+flask_app.config['MAIL_USE_SSL'] = False
+flask_app.config['MAIL_USERNAME'] = os.getenv("DEL_EMAIL")
+flask_app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+mail=Mail(flask_app)
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+stripe.api_key=os.getenv("STRIPE_PUBLISHABLE_KEY")
 
 # Swagger
 authorizations = {"bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
@@ -65,6 +78,9 @@ courts_ns = Namespace("Courts", description="Court related operations")
 matches_ns = Namespace("Matchmaking", description="Matchmaking related operations")
 favs_ns = Namespace("Favorites", description="Favorites related operations")
 bookings_ns= Namespace("Bookings",description="Bookings related operations")
+payments_ns = Namespace("Payments", description="Stripe payment operations")
+reviews_ns = Namespace("Admin", description="Admin related Operations")
+admin_ns = Namespace("Reviews", description="Review related Operations")
 
 
 api.add_namespace(users_ns, path="/users")
@@ -72,6 +88,10 @@ api.add_namespace(courts_ns, path="/courts")
 api.add_namespace(matches_ns, path="/matchmaking")
 api.add_namespace(favs_ns, path="/favs")
 api.add_namespace(bookings_ns, path="/bookings")
+api.add_namespace(payments_ns, path="/payments")
+api.add_namespace(admin_ns, path="/admin")
+api.add_namespace(reviews_ns, path="/reviews")
+
 
 
 # Import routes and models
@@ -81,3 +101,6 @@ import app.models.cf_models
 import app.routes.matchMakingRoutes
 import app.routes.favoritesRoutes
 import app.routes.bookingRoutes
+import app.routes.paymentRoutes
+import app.routes.adminRoutes
+import app.routes.ReviewRoutes

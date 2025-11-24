@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // adjust path
-import { Button } from "@/components/ui/button"; // adjust path
-import { Input } from "@/components/ui/input"; // adjust path
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -9,19 +11,40 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"; // adjust path
-import { usersData } from "@/lib/admin-data"; // adjust path
+} from "@/components/ui/dialog";
+import { Search } from "lucide-react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+import { toast } from "react-toastify";
 
 export default function AllUsers() {
-  const [users, setUsers] = useState(usersData);
+  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []); // FIXED
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(API_PATH.ADMIN.GET_ALL_USERS, { withCredentials: true });
+      setUsers(res.data.users || []);
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     return users.filter(
       (user) =>
-        user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
@@ -31,52 +54,77 @@ export default function AllUsers() {
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmRemove = () => {
-    if (selectedUser) {
-      setUsers(users.filter((u) => u.id !== selectedUser.id));
+  const handleConfirmRemove = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await axiosInstance.delete(
+        API_PATH.ADMIN.DELETE_USER(selectedUser.user_id),
+        { withCredentials: true }
+      );
+
+      toast.success(`${selectedUser.username} deleted successfully`);
+
+      // FIXED (user_id instead of id)
+      setUsers(users.filter((u) => u.user_id !== selectedUser.user_id));
+    } catch (err) {
+      toast.error("Failed to delete user");
+    } finally {
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
     }
-    setDeleteDialogOpen(false);
-    setSelectedUser(null);
   };
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case "admin":
         return "bg-purple-900 text-purple-200";
-      case "owner":
+      case "court_owner":
         return "bg-blue-900 text-blue-200";
       default:
         return "bg-gray-700 text-gray-200";
     }
   };
 
+  if (loading)
+    return (
+      <div className="flex justify-center py-20">
+        <p className="text-gray-500">Loading users...</p>
+      </div>
+    );
+
   return (
-    <div className="w-full space-y-4">
-      <div className="flex gap-2">
+    <div className="w-full space-y-6">
+      <div className="relative max-w-sm mx-auto">
+        <Search className="absolute top-2.5 left-3 w-5 h-5 text-gray-400" />
         <Input
-          placeholder="Search by name or email..."
+          placeholder="Search by username or email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+          className="pl-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200"
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-card">
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-card">
-              <TableHead className="text-foreground">Full Name</TableHead>
-              <TableHead className="text-foreground">Email</TableHead>
-              <TableHead className="text-foreground">Role</TableHead>
-              <TableHead className="text-foreground">Phone</TableHead>
-              <TableHead className="text-foreground">Action</TableHead>
+          <TableHeader className="bg-gray-50">
+            <TableRow className="border-b">
+              <TableHead>Username</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id} className="border-border hover:bg-muted">
-                <TableCell className="text-foreground">{user.full_name}</TableCell>
-                <TableCell className="text-foreground">{user.email}</TableCell>
+            {filteredUsers.map((user, index) => (
+              <TableRow
+                key={user.user_id} // FIXED
+                className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+              >
+                <TableCell>{user.username}</TableCell>
+                <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
@@ -86,12 +134,12 @@ export default function AllUsers() {
                     {user.role}
                   </span>
                 </TableCell>
-                <TableCell className="text-foreground">{user.phone}</TableCell>
+                <TableCell>{user.phone}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-400 hover:bg-red-950 hover:text-red-300"
+                    className="text-red-500 hover:bg-red-50 hover:text-red-600"
                     onClick={() => handleRemoveClick(user)}
                   >
                     🗑️ Remove
@@ -104,32 +152,24 @@ export default function AllUsers() {
       </div>
 
       {filteredUsers.length === 0 && (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">No users found</p>
+        <div className="flex items-center justify-center py-12 text-gray-400">
+          No users found
         </div>
       )}
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-card border border-border">
+        <DialogContent className="bg-white border border-gray-200 rounded-lg shadow-md">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Remove User</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Are you sure you want to remove {selectedUser?.full_name} from the system? This action cannot be undone.
+            <DialogTitle>Remove User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {selectedUser?.username}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              className="border-border text-foreground hover:bg-muted"
-            >
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmRemove}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button variant="destructive" onClick={handleConfirmRemove}>
               Remove
             </Button>
           </DialogFooter>

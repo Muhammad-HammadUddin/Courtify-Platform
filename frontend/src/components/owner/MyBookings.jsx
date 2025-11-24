@@ -1,65 +1,102 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "../../utils/axios.js";
+import { API_PATH } from "@/utils/apiPath";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function MyBookings() {
-  const [bookings, setBookings] = useState([
-    {
-      id: 1,
-      courtName: "Downtown Courts A",
-      userName: "Alex Johnson",
-      date: "2024-11-15",
-      timeSlot: "10:00 AM - 11:00 AM",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      courtName: "Riverside Sports Complex",
-      userName: "Sarah Williams",
-      date: "2024-11-16",
-      timeSlot: "2:00 PM - 3:00 PM",
-      status: "Approved",
-    },
-    {
-      id: 3,
-      courtName: "North Park Facility",
-      userName: "Mike Brown",
-      date: "2024-11-17",
-      timeSlot: "6:00 PM - 7:00 PM",
-      status: "Approved",
-    },
-    {
-      id: 4,
-      courtName: "Downtown Courts A",
-      userName: "Emma Davis",
-      date: "2024-11-18",
-      timeSlot: "9:00 AM - 10:00 AM",
-      status: "Pending",
-    },
-  ]);
+  const [bookings, setBookings] = useState([]);
+  const [rejectReason, setRejectReason] = useState("");
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
 
-  const handleApprove = (id) => {
-    setBookings(
-      bookings.map((b) => (b.id === id ? { ...b, status: "Approved" } : b))
-    );
-    alert("Booking Approved: The booking has been confirmed.");
+  // --------------------------------
+  // 1) GET BOOKINGS FROM BACKEND
+  // --------------------------------
+  const fetchBookings = async () => {
+    try {
+      const res = await axiosInstance.get(API_PATH.BOOKINGS.OWNER_COURT_BOOKINGS, {
+        withCredentials: true,
+      });
+      setBookings(res.data.bookings || []);
+    } catch (error) {
+      console.log("Error fetching bookings:", error);
+    }
   };
 
-  const handleCancel = (id) => {
-    setBookings(
-      bookings.map((b) => (b.id === id ? { ...b, status: "Cancelled" } : b))
-    );
-    alert("Booking Cancelled: The booking has been cancelled.");
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  // --------------------------------
+  // 2) APPROVE BOOKING
+  // --------------------------------
+  const handleApprove = async (id) => {
+    try {
+      await axiosInstance.put(API_PATH.BOOKINGS.APPROVE_BOOKING(id));
+
+      // UI Update
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, booking_status: "approved" } : b
+        )
+      );
+    } catch (error) {
+      console.log("Approve Error:", error);
+    }
   };
 
+  // --------------------------------
+  // 3) OPEN REJECT MODAL
+  // --------------------------------
+  const openReject = (id) => {
+    setSelectedBookingId(id);
+    setRejectReason("");
+    setOpenRejectModal(true);
+  };
+
+  // --------------------------------
+  // 4) REJECT BOOKING (with reason)
+  // --------------------------------
+  const handleRejectConfirm = async () => {
+    try {
+      await axiosInstance.put(API_PATH.BOOKINGS.REJECT_BOOKING(selectedBookingId), {
+        cancellation_reason: rejectReason,
+      });
+
+      // UI Update
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === selectedBookingId ? { ...b, booking_status: "rejected" } : b
+        )
+      );
+
+      setOpenRejectModal(false);
+    } catch (error) {
+      console.log("Reject Error:", error);
+    }
+  };
+
+  // --------------------------------
+  // 5) Badge color based on status
+  // --------------------------------
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Approved":
+    switch (status.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-100 text-black-800";
+      case "approved":
         return "bg-green-100 text-green-800";
-      case "Cancelled":
+      case "cancelled":
+      case "rejected":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -78,68 +115,66 @@ export default function MyBookings() {
           <CardTitle>Booking List</CardTitle>
           <CardDescription>Recent bookings for your courts</CardDescription>
         </CardHeader>
+
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Court Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Time Slot</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
+                  <th className="text-left py-3 px-4">Court Name</th>
+                  <th className="text-left py-3 px-4">Customer</th>
+                  <th className="text-left py-3 px-4">Date</th>
+                  <th className="text-left py-3 px-4">Time Slot</th>
+                  <th className="text-left py-3 px-4">Status</th>
+                  <th className="text-left py-3 px-4">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {bookings.map((booking) => (
                   <tr
                     key={booking.id}
                     className="border-b border-border hover:bg-muted/50 transition-colors"
                   >
-                    <td className="py-4 px-4 text-foreground">{booking.courtName}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.userName}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.date}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.timeSlot}</td>
+                    <td className="py-4 px-4">{booking.court.name}</td>
+                    <td className="py-4 px-4">{booking.user.name}</td>
+                    <td className="py-4 px-4">{booking.booking_date}</td>
+                    <td className="py-4 px-4">{`${booking.start_time}-${booking.end_time}`}</td>
+
                     <td className="py-4 px-4">
-                      <Badge className={getStatusColor(booking.status)}>
-                        {booking.status}
+                      <Badge className={getStatusColor(booking.booking_status)}>
+                        {booking.booking_status.toLowerCase()}
                       </Badge>
                     </td>
+
                     <td className="py-4 px-4">
                       <div className="flex gap-2">
-                        {booking.status === "Pending" && (
+                        {booking.booking_status.toLowerCase() === "pending" && (
                           <>
                             <Button
                               size="sm"
                               variant="outline"
+                              className="text-green-600"
                               onClick={() => handleApprove(booking.id)}
-                              className="text-green-600 hover:text-green-700"
                             >
                               Approve
                             </Button>
+
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleCancel(booking.id)}
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive"
+                              onClick={() => openReject(booking.id)}
                             >
                               Reject
                             </Button>
                           </>
                         )}
-                        {booking.status === "Approved" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCancel(booking.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                        {booking.status === "Cancelled" && (
-                          <span className="text-muted-foreground text-sm">—</span>
+
+                        {["approved", "cancelled", "rejected"].includes(booking.booking_status.toLowerCase()) && (
+                          <span className="text-muted-foreground text-sm">
+                            — No Action
+                          </span>
                         )}
                       </div>
                     </td>
@@ -150,6 +185,42 @@ export default function MyBookings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reject Modal */}
+      <Dialog open={openRejectModal} onOpenChange={setOpenRejectModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Booking</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please enter a reason for rejecting this booking:
+            </p>
+
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter reason..."
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenRejectModal(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              className="text-destructive"
+              onClick={handleRejectConfirm}
+              disabled={!rejectReason.trim()}
+            >
+              Confirm Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

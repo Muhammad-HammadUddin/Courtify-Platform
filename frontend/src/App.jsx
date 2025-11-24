@@ -16,6 +16,8 @@ import AddCourt from './components/owner/AddCourt';
 import OwnerBooking from './components/owner/MyBookings';
 import RevenueReport from './components/owner/RevenueReport';
 import AdminDashboard from './pages/AdminDashboard';
+import CancelPage from './pages/CancelPage';
+import SuccessPage from './pages/SuccessPage';
 
 
 function App() {
@@ -32,6 +34,7 @@ function App() {
         <Route path="matches" element={<UpcomingMatches />} />
         <Route path="bookings" element={<MyBookings />} />
         <Route path="favorites" element={<FavoriteCourts />} />
+
       </Route>
 
   <Route path="/courts/:id" element={<BookingPage />} />
@@ -48,6 +51,9 @@ function App() {
 <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
   {/* Owner dashboard */}
+
+  <Route path="/success" element={<SuccessPage/>}/>
+  <Route path="/cancel" element={<CancelPage/>}/>
  
 </Routes>
     </div>

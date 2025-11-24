@@ -6,9 +6,9 @@ import { API_PATH } from "@/utils/apiPath.js";
 
 export default function SearchCourts() {
   const [courts, setCourts] = useState([]);
-  const [favourites, setFavourites] = useState([]); // ⭐ NEW
+  const [favourites, setFavourites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [favLoading, setFavLoading] = useState(false); // ⭐ NEW
+  const [favLoading, setFavLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSport, setSelectedSport] = useState("all");
 
@@ -20,12 +20,27 @@ export default function SearchCourts() {
   const fetchCourts = async () => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, {
-        withCredentials: true,
+      const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, { withCredentials: true });
+      console.log(res)
+      const fetchedCourts = res.data.courts || [];
+
+      // Fetch current user ratings
+      const ratingsRes = await axiosInstance.get(API_PATH.REVIEWS.MY_REVIEWS, { withCredentials: true });
+      const myRatings = ratingsRes.data.reviews || [];
+
+      // Merge ratings into courts
+      const courtsWithRatings = fetchedCourts.map(court => {
+        const myRating = myRatings.find(r => r.court_id === court.id);
+        return {
+          ...court,
+          rating: myRating?.rating || 0
+        };
       });
-      setCourts(res.data.courts || []);
+
+      setCourts(courtsWithRatings);
     } catch (err) {
       toast.error("Failed to fetch courts");
+      console.log(err);
     } finally {
       setLoading(false);
     }
@@ -37,9 +52,7 @@ export default function SearchCourts() {
   const fetchFavourites = async () => {
     try {
       setFavLoading(true);
-      const res = await axiosInstance.get(API_PATH.FAVOURITES.GET_FAVOURITES, {
-        withCredentials: true,
-      });
+      const res = await axiosInstance.get(API_PATH.FAVOURITES.GET_FAVOURITES, { withCredentials: true });
       setFavourites(res.data.favourites || []);
     } catch (err) {
       console.log("Fav fetch error:", err);
@@ -53,13 +66,8 @@ export default function SearchCourts() {
   // -----------------------------
   const addFavourite = async (court_id) => {
     try {
-      await axiosInstance.post(
-        API_PATH.FAVOURITES.ADD_FAVOURITE,
-        { court_id },
-        { withCredentials: true }
-      );
-
-      fetchFavourites(); // refresh fav list
+      await axiosInstance.post(API_PATH.FAVOURITES.ADD_FAVOURITE, { court_id }, { withCredentials: true });
+      fetchFavourites();
       toast.success("Added to favourites");
     } catch (err) {
       toast.error("Failed to add favourite");
@@ -71,13 +79,10 @@ export default function SearchCourts() {
   // -----------------------------
   const removeFavourite = async (court_id) => {
     try {
-      const fav = favourites.find((f) => f.court_id === court_id);
+      const fav = favourites.find(f => f.court_id === court_id);
       if (!fav) return;
 
-      await axiosInstance.delete(API_PATH.FAVOURITES.REMOVE_FAVOURITE(court_id), {
-        withCredentials: true,
-      });
-
+      await axiosInstance.delete(API_PATH.FAVOURITES.REMOVE_FAVOURITE(court_id), { withCredentials: true });
       fetchFavourites();
       toast.success("Removed from favourites");
     } catch (err) {
@@ -96,14 +101,13 @@ export default function SearchCourts() {
   // -----------------------------
   // Filter courts
   // -----------------------------
-  const filteredCourts = courts.filter((court) => {
+  const filteredCourts = courts.filter(court => {
     const matchesSearch =
       court.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       court.location.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesSport =
-      selectedSport === "all" ||
-      court.type.toLowerCase() === selectedSport.toLowerCase();
+      selectedSport === "all" || court.type.toLowerCase() === selectedSport.toLowerCase();
 
     return matchesSearch && matchesSport;
   });
@@ -131,7 +135,7 @@ export default function SearchCourts() {
 
       {/* Sport Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {sports.map((sport) => (
+        {sports.map(sport => (
           <button
             key={sport}
             onClick={() => setSelectedSport(sport)}
@@ -151,8 +155,8 @@ export default function SearchCourts() {
         <div className="text-center py-12 text-slate-500">Loading courts...</div>
       ) : filteredCourts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourts.map((court) => {
-            const isFav = favourites.some((f) => f.court_id === court.id);
+          {filteredCourts.map(court => {
+            const isFav = favourites.some(f => f.court_id === court.id);
 
             return (
               <CourtCard
