@@ -6,11 +6,20 @@ from datetime import time, datetime
 
 # ENUMS
 user_role_enum = ENUM("user", "admin", "court_owner", name="user_role", create_type=True)
+<<<<<<< Updated upstream
 court_status_enum = ENUM("approved", "rejected","pending", name="court_status", create_type=True)
 booking_status_enum = ENUM("confirmed", "cancelled", "completed", "pending", name="booking_status", create_type=True)
 payment_method_enum = ENUM("stripe", name="payment_method", create_type=True)
 payment_status_enum = ENUM("pending", "successful", "failed", name="payment_status", create_type=True)
 notification_enum = ENUM("email", name="notification_channel", create_type=True)
+=======
+court_status_enum = ENUM("approved", "rejected", "pending", name="court_status", create_type=True)
+booking_status_enum = ENUM("approved", "rejected", "completed", "pending", "cancelled", "confirmed", name="booking_status", create_type=True)
+payment_method_enum = ENUM("stripe", "card", name="payment_method", create_type=True)
+
+# 🔥 notification ENUM removed
+
+>>>>>>> Stashed changes
 
 # =========================
 # Users Table
@@ -22,7 +31,7 @@ class Users(db.Model):
     username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    phone_number = db.Column(db.String(20),nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
     gender = db.Column(db.String(10))
     role = db.Column(user_role_enum, nullable=False)
     date_joined = db.Column(db.DateTime, default=datetime.utcnow)
@@ -37,8 +46,7 @@ class Users(db.Model):
     payments = db.relationship("Payments", backref="payer",
                                cascade="all, delete-orphan", passive_deletes=True)
 
-    notifications = db.relationship("Notifications", backref="notified_user",
-                                    cascade="all, delete-orphan", passive_deletes=True)
+    # 🔥 notifications relationship removed
 
     matchmaking = db.relationship("Matchmaking", backref="match_user",
                                   cascade="all, delete-orphan", passive_deletes=True)
@@ -50,9 +58,12 @@ class Users(db.Model):
                               cascade="all, delete-orphan", passive_deletes=True)
 
 
+<<<<<<< Updated upstream
 # =========================
 # Courts Table
 # =========================
+=======
+>>>>>>> Stashed changes
 class Courts(db.Model):
     __tablename__ = "courts"
 
@@ -70,27 +81,25 @@ class Courts(db.Model):
     description = db.Column(db.Text)
     image_url = db.Column(db.String(255))
 
+    def to_dict(self):
+        def format_time(t):
+            if isinstance(t, (time, datetime)):
+                return t.strftime("%H:%M")
+            return t
 
-   
-def to_dict(self):
-    def format_time(t):
-        if isinstance(t, (time, datetime)):
-            return t.strftime("%H:%M")  # only hours and minutes
-        return t
-
-    return {
-        "id": self.id,
-        "name": self.name,
-        "location": self.location,
-        "hourly_rate": float(self.hourly_rate) if isinstance(self.hourly_rate, Decimal) else self.hourly_rate,
-        "maintenance": float(self.maintenance) if isinstance(self.maintenance, Decimal) else self.maintenance,
-        "status": self.status,
-        "type": self.type,
-        "opening_time": format_time(self.opening_time),
-        "closing_time": format_time(self.closing_time),
-        "description": self.description,
-        "image_url": self.image_url
-    }
+        return {
+            "id": self.id,
+            "name": self.name,
+            "location": self.location,
+            "hourly_rate": float(self.hourly_rate) if isinstance(self.hourly_rate, Decimal) else self.hourly_rate,
+            "maintenance": float(self.maintenance) if isinstance(self.maintenance, Decimal) else self.maintenance,
+            "status": self.status,
+            "type": self.type,
+            "opening_time": format_time(self.opening_time),
+            "closing_time": format_time(self.closing_time),
+            "description": self.description,
+            "image_url": self.image_url
+        }
 
     bookings = db.relationship("Bookings", backref="court",
                                cascade="all, delete-orphan", passive_deletes=True)
@@ -102,9 +111,6 @@ def to_dict(self):
                               cascade="all, delete-orphan", passive_deletes=True)
 
 
-# =========================
-# Bookings Table
-# =========================
 class Bookings(db.Model):
     __tablename__ = "bookings"
 
@@ -121,25 +127,20 @@ class Bookings(db.Model):
     cancellation_reason = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (
-    db.UniqueConstraint(
-        'court_id', 
-        'booking_date', 
-        'start_time', 
-        'end_time', 
-        name='unique_slot'
-    ),
-)
+        db.UniqueConstraint(
+            'court_id',
+            'booking_date',
+            'start_time',
+            'end_time',
+            name='unique_slot'
+        ),
+    )
 
     payments = db.relationship("Payments", backref="booking",
                                cascade="all, delete-orphan", passive_deletes=True)
 
-    notifications = db.relationship("Notifications", backref="notify_booking",
-                                    cascade="all, delete-orphan", passive_deletes=True)
 
 
-# =========================
-# Payments Table
-# =========================
 class Payments(db.Model):
     __tablename__ = "payments"
 
@@ -151,27 +152,13 @@ class Payments(db.Model):
     transaction_id = db.Column(db.String(100))
     payment_status = db.Column(payment_status_enum, nullable=False, default="pending")
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+<<<<<<< Updated upstream
     
+=======
+    currency = db.Column(db.String(10), nullable=False, default="USD")
+>>>>>>> Stashed changes
 
 
-# =========================
-# Notifications Table
-# =========================
-class Notifications(db.Model):
-    __tablename__ = "notifications"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
-    booking_id = db.Column(db.Integer, db.ForeignKey("bookings.id", ondelete="CASCADE"))
-    subject = db.Column(db.String(255), nullable=False)
-    message_body = db.Column(db.Text, nullable=False)
-    sent_via = db.Column(notification_enum, nullable=False, default="email")
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-# =========================
-# Matchmaking Table
-# =========================
 class Matchmaking(db.Model):
     __tablename__ = "matchmaking"
 
@@ -185,9 +172,12 @@ class Matchmaking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+<<<<<<< Updated upstream
 # =========================
 # Favourites Table
 # =========================
+=======
+>>>>>>> Stashed changes
 class Favourites(db.Model):
     __tablename__ = "favourites"
 
@@ -197,9 +187,6 @@ class Favourites(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# =========================
-# Reviews Table
-# =========================
 class Reviews(db.Model):
     __tablename__ = "reviews"
 

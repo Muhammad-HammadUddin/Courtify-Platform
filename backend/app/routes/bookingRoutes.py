@@ -150,11 +150,180 @@ class BookingsByCourt(Resource):
     @jwt_required()
     def get(self, court_id):
         try:
+<<<<<<< Updated upstream
             bookings = Bookings.query.filter_by(court_id=court_id).all()
+=======
+            # Court exists?
+            court = Courts.query.get_or_404(court_id)
+
+            # Only ACTIVE bookings fetch karo
+            active_status = ["pending", "approved","confirmed", "completed"]
+
+            bookings = (
+                Bookings.query
+                .filter(
+                    Bookings.court_id == court_id,
+                    Bookings.booking_status.in_(active_status)
+                )
+                .all()
+            )
+
+            result = [booking_to_dict(b, court) for b in bookings]
+
+            return {"bookings": result}, 200
+
+        except Exception as e:
+            return {
+                "error": "Failed to fetch bookings for this court",
+                "details": str(e)
+            }, 500
+
+        
+@bookings_ns.route("/all-with-courts")
+class AllBookingsWithCourts(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            owner_id = int(get_jwt_identity())
+
+            
+            records = (
+                db.session.query(Bookings, Courts, Users)
+                .join(Courts, Bookings.court_id == Courts.id)
+                .join(Users, Bookings.user_id == Users.id)
+                .filter(Courts.owner_id == owner_id)   # Only owner’s courts
+                .all()
+            )
+
+>>>>>>> Stashed changes
             result = []
             for b in bookings:
                 court = Courts.query.get(b.court_id)
                 result.append(booking_to_dict(b, court))
             return {"bookings": result}, 200
         except Exception as e:
+<<<<<<< Updated upstream
             return {"error": "Failed to fetch bookings for this court", "details": str(e)}, 500
+=======
+            return {"error": "Failed to fetch bookings", "details": str(e)}, 500
+        
+
+@bookings_ns.route("/reject/<int:booking_id>")
+class RejectBooking(Resource):
+    @jwt_required()
+    def put(self, booking_id):
+        data = request.json or {}
+        
+        user_id = int(get_jwt_identity())
+        claims = get_jwt()
+        role = claims.get("role")
+
+        booking = Bookings.query.get_or_404(booking_id)
+        court = Courts.query.get_or_404(booking.court_id)
+
+        try:
+            if role != "court_owner":
+                return {"error": "Only court owners can reject bookings"}, 403
+
+            if court.owner_id != user_id:
+                return {"error": "You do not own this court"}, 403
+
+            # Update status
+            booking.booking_status = "rejected"
+            booking.cancellation_reason = data.get("cancellation_reason", "")
+            db.session.commit()
+
+            # -------------------------
+            # Send email to user
+            # -------------------------
+            user = Users.query.get(booking.user_id)
+
+            msg_user = Message(
+                subject="Courtify: Booking Rejected",
+                sender=os.getenv("DEL_EMAIL"),
+                recipients=[user.email]
+            )
+
+            msg_user.html = f"""
+            <div style="font-family:Arial; max-width:600px; margin:20px auto; padding:20px; background:#ffe6e6; border-radius:8px;">
+                <h2 style="color:#d32f2f; text-align:center;">Booking Rejected</h2>
+                <p>Hello {user.username},</p>
+                <p>Your booking for <strong>{court.name.title()}</strong> has been <strong>rejected</strong>.</p>
+
+                <p><strong>Date:</strong> {booking.booking_date}<br/>
+                <strong>Time:</strong> {booking.start_time} - {booking.end_time}</p>
+
+                <p><strong>Reason:</strong> {booking.cancellation_reason or "No reason provided"}</p>
+            </div>
+            """
+
+            mail.send(msg_user)
+
+            return {
+                "message": "Booking rejected successfully",
+                "booking": booking_to_dict(booking, court)
+            }, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "Failed to reject booking", "details": str(e)}, 500
+
+        
+
+@bookings_ns.route("/approve/<int:booking_id>")
+class ApproveBooking(Resource):
+    @jwt_required()
+    def put(self, booking_id):
+        user_id = int(get_jwt_identity())
+        claims = get_jwt()
+        role = claims.get("role")
+
+        booking = Bookings.query.get_or_404(booking_id)
+        court = Courts.query.get_or_404(booking.court_id)
+
+        try:
+            if role != "court_owner":
+                return {"error": "Only court owners can approve bookings"}, 403
+
+            if court.owner_id != user_id:
+                return {"error": "You do not own this court"}, 403
+
+            # Update booking
+            booking.booking_status = "approved"
+            db.session.commit()
+
+            # -------------------------
+            # Email to user
+            # -------------------------
+            user = Users.query.get(booking.user_id)
+
+            msg_user = Message(
+                subject="Courtify: Booking Approved",
+                sender=os.getenv("DEL_EMAIL"),
+                recipients=[user.email]
+            )
+
+            msg_user.html = f"""
+            <div style="font-family:Arial; max-width:600px; margin:20px auto; padding:20px; background:#e8f5e9; border-radius:8px;">
+                <h2 style="color:#2e7d32; text-align:center;">Booking Approved </h2>
+                
+                <p>Hello {user.username},</p>
+                <p>Your booking for <strong>{court.name.title()}</strong> has been <strong>approved</strong>!</p>
+                <p> Pay advance to avoid cancellation!</p>
+
+                <p><strong>Date:</strong> {booking.booking_date}<br/>
+                <strong>Time:</strong> {booking.start_time} - {booking.end_time}</p>
+            </div>
+            """
+
+            mail.send(msg_user)
+
+            return {
+                "message": "Booking approved successfully",
+                "booking": booking_to_dict(booking, court)
+            }, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "Failed to approve booking", "details": str(e)}, 500
+>>>>>>> Stashed changes

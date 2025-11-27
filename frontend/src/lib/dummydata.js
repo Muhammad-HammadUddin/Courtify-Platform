@@ -1,27 +1,31 @@
 // dummyCourts.js
 
-// Dummy court data
-
-
-// Generate time slots for a given day
+// Generate full 1-hour time slots, ignore last incomplete slot
 export function generateTimeSlots(openTime, closeTime) {
     const slots = [];
-    const [openHour] = openTime.split(":").map(Number);
-    const [closeHour] = closeTime.split(":").map(Number);
 
-    for (let hour = openHour; hour < closeHour; hour++) {
-        const startTime = `${String(hour).padStart(2, "0")}:00`;
-        const endTime = `${String(hour + 1).padStart(2, "0")}:00`;
+    let [openHour, openMinute] = openTime.split(":").map(Number);
+    let [closeHour, closeMinute] = closeTime.split(":").map(Number);
 
-        // Randomly mark some slots as booked (30% chance)
+    let current = new Date();
+    current.setHours(openHour, openMinute, 0, 0);
 
+    const end = new Date();
+    end.setHours(closeHour, closeMinute, 0, 0);
 
-        slots.push({
-            id: `${startTime}-${endTime}`,
-            startTime,
-            endTime,
+    while (true) {
+        let next = new Date(current);
+        next.setHours(current.getHours() + 1);
 
-        });
+        // Agar next slot closing time se zyada hai, break karo
+        if (next > end) break;
+
+        const startTime = `${String(current.getHours()).padStart(2, "0")}:${String(current.getMinutes()).padStart(2,"0")}`;
+        const endTime = `${String(next.getHours()).padStart(2,"0")}:${String(next.getMinutes()).padStart(2,"0")}`;
+
+        slots.push({ id: `${startTime}-${endTime}`, startTime, endTime });
+
+        current = next;
     }
 
     return slots;
@@ -48,7 +52,7 @@ export function getDateLabel(dateStr, index) {
     return date.toLocaleDateString("en-US", options);
 }
 
-// Booking state object helper
+// Create booking state object
 export function createBookingState(courtId, date, startTime) {
     return {
         courtId,

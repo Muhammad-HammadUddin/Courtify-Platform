@@ -6,8 +6,10 @@ import App from './App.jsx';
 // Import Toastify
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { RoleProvider } from './Context/RoleContext.jsx';
 
 createRoot(document.getElementById('root')).render(
+  <RoleProvider>
   <BrowserRouter>
     <>
       <App />
@@ -25,4 +27,5 @@ createRoot(document.getElementById('root')).render(
       />
     </>
   </BrowserRouter>
+  </RoleProvider>
 );

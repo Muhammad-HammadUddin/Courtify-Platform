@@ -1,3 +1,5 @@
+// --- BookingPage.jsx (Enhanced Interactive UI) ---
+
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -9,9 +11,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import axiosInstance from "@/utils/axios.js";
 import { API_PATH } from "@/utils/apiPath";
 import { generateTimeSlots, getNext7Days, getDateLabel } from "../lib/dummydata.js";
-
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Heart, MapPin, DollarSign, ArrowLeft, Calendar, CheckCircle2, Zap, Clock } from "lucide-react";
 
 export default function BookingPage() {
   const { id } = useParams();
@@ -27,20 +29,19 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch court details
   useEffect(() => {
     const fetchCourt = async () => {
       try {
         setLoading(true);
         const res = await axiosInstance.get(API_PATH.COURT.COURT_BY_ID(id), { withCredentials: true });
-        const courtData = res.data.court;
-        setCourt(courtData);
+        setCourt(res.data.court);
 
-        if (courtData) {
-          setSlots(generateTimeSlots(courtData.opening_time, courtData.closing_time));
+        if (res.data.court) {
+          setSlots(generateTimeSlots(res.data.court.opening_time, res.data.court.closing_time));
         }
       } catch (err) {
         console.error("Failed to fetch court details:", err);
+        toast.error("Failed to load court details");
       } finally {
         setLoading(false);
       }
@@ -48,7 +49,6 @@ export default function BookingPage() {
     fetchCourt();
   }, [id]);
 
-  // Fetch bookings for this court
   useEffect(() => {
     const fetchBookings = async () => {
       if (!court) return;
@@ -60,15 +60,14 @@ export default function BookingPage() {
           endTime: b.end_time,
         }));
         setBookedSlots(booked);
-        console.log(bookedSlots)
       } catch (err) {
         console.error("Failed to fetch bookings:", err);
+        toast.error("Failed to load bookings");
       }
     };
     fetchBookings();
   }, [court]);
 
-  // Update slots when date or court changes
   useEffect(() => {
     if (court && selectedDate) {
       setSlots(generateTimeSlots(court.opening_time, court.closing_time));
@@ -76,12 +75,46 @@ export default function BookingPage() {
     }
   }, [court, selectedDate]);
 
-  if (loading) return <div className="text-center py-20 text-slate-500">Loading court details...</div>;
-  if (!court) return <p className="text-center py-20 text-red-500">Court not found</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"
+          />
+          <p className="text-xl font-semibold text-green-700">Loading court details...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!court) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <p className="text-2xl font-bold text-red-600 mb-4">Court not found</p>
+          <Link to="/">
+            <Button className="bg-green-600 hover:bg-green-700">Go Back Home</Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleSlotSelect = (slot) => {
     setSelectedSlot(slot);
     setIsModalOpen(true);
+    toast.info(`Selected slot: ${slot.startTime} - ${slot.endTime}`);
   };
 
   const handleConfirmBooking = async () => {
@@ -100,13 +133,10 @@ export default function BookingPage() {
         { withCredentials: true }
       );
 
-      toast.success("Booking request submitted successfully! ✅");
-
-      // Close modal & clear selection
+      toast.success("🎉 Booking created Successfully and is Pending Approval");
       setIsModalOpen(false);
       setSelectedSlot(null);
 
-      // Refresh booked slots
       const res = await axiosInstance.get(API_PATH.BOOKINGS.GET_BOOKINGS_BY_COURT(court.id), { withCredentials: true });
       const booked = res.data.bookings.map(b => ({
         date: b.booking_date,
@@ -117,107 +147,286 @@ export default function BookingPage() {
 
     } catch (err) {
       console.error("Failed to create booking:", err);
-      toast.error("Failed to submit booking. Please try again.");
+      toast.error("❌ Failed to book slot. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const toggleFavorite = () => setIsFavorite(!isFavorite);
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    toast.success(isFavorite ? "Removed from favorites" : "Added to favorites ❤️");
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <PageHeader title={court.name} subtitle={`Booking slots for ${court.location}`} />
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity }}
+          className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"
+        />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex justify-between items-start mb-6">
+            <Link to="/user/dashboard">
+              <motion.button
+                whileHover={{ scale: 1.05, x: -5 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full transition-all"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back</span>
+              </motion.button>
+            </Link>
 
-      <div className="flex justify-between items-center mb-4">
-        <Link to="/">
-          <Button variant="ghost" className="text-green-600 hover:text-white hover:bg-green-500 transition-colors">← Back to Courts</Button>
-        </Link>
-        <button onClick={toggleFavorite} className="text-2xl">{isFavorite ? "❤️" : "🤍"}</button>
+            <motion.button
+              onClick={toggleFavorite}
+              whileHover={{ scale: 1.2, rotate: 5 }}
+              whileTap={{ scale: 0.9 }}
+              className="bg-white/20 backdrop-blur-sm p-3 rounded-full"
+            >
+              <Heart 
+                className={`w-6 h-6 transition-all ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`}
+              />
+            </motion.button>
+          </div>
+
+          <motion.h1
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-4xl sm:text-5xl font-bold mb-4"
+          >
+            {court.name}
+          </motion.h1>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-wrap gap-4 items-center text-sm sm:text-base"
+          >
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <MapPin className="w-4 h-4" />
+              <span>{court.location}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <DollarSign className="w-4 h-4" />
+              <span>Rs {court.hourly_rate}/hour</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Zap className="w-4 h-4" />
+              <span>{court.type}</span>
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Court Description */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="mb-8 border-none shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="text-2xl text-green-700 flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6" />
+                Court Details
+              </CardTitle>
+              <CardDescription className="text-base">
+                {court.description || "Premium futsal court with top-notch facilities"}
+              </CardDescription>
+            </CardHeader>
+            {court.maintenance && (
+              <CardContent>
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-4 rounded-lg font-semibold flex items-center gap-2"
+                >
+                  <Zap className="w-5 h-5" />
+                  ⚠️ Court Under Maintenance
+                </motion.div>
+              </CardContent>
+            )}
+          </Card>
+        </motion.div>
+
+        {/* Time Slots */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-2xl text-green-700 flex items-center gap-2">
+                <Calendar className="w-6 h-6" />
+                Select Your Time Slot
+              </CardTitle>
+              <CardDescription className="text-base">
+                Choose from available slots in the next 7 days
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={selectedDate} onValueChange={setSelectedDate}>
+                <TabsList className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6 bg-green-100/50 p-2 rounded-xl">
+                  {nextDays.map((day, index) => (
+                    <TabsTrigger
+                      key={day}
+                      value={day}
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white hover:bg-green-200 transition-all rounded-lg font-medium"
+                    >
+                      {getDateLabel(day, index)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {nextDays.map((day) => (
+                  <TabsContent key={day} value={day}>
+                    <SlotGrid
+                      slots={slots}
+                      onSlotSelect={handleSlotSelect}
+                      selectedSlot={selectedSlot}
+                      bookedSlots={bookedSlots}
+                      selectedDate={day}
+                    />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Court Info */}
-      <Card className="mb-6 shadow-lg hover:shadow-2xl transition-shadow duration-300 border-l-4 border-green-500">
-        <CardHeader>
-          <CardTitle>Court Details</CardTitle>
-          <CardDescription>{court.description || "No additional details provided."}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 items-center">
-          <div className="p-2 bg-green-100 rounded-lg text-green-800 font-semibold">Type: {court.type}</div>
-          <div className="p-2 bg-yellow-100 rounded-lg text-yellow-800 font-semibold">Price: Rs {court.hourly_rate}</div>
-          <div className="p-2 bg-blue-100 rounded-lg text-blue-800 font-semibold">Location: {court.location}</div>
-          {court.maintenance && <div className="p-2 bg-red-100 rounded-lg text-red-800 font-semibold col-span-full">⚠️ Under Maintenance</div>}
-        </CardContent>
-      </Card>
-
-      {/* Time Slots */}
-      <Card className="mb-6 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle>Select a Time Slot</CardTitle>
-          <CardDescription>Available slots in the next 7 days</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={selectedDate} onValueChange={setSelectedDate}>
-            <TabsList className="grid grid-cols-4 sm:grid-cols-7 gap-1 mb-4">
-              {nextDays.map((day, index) => (
-                <TabsTrigger key={day} value={day} className="hover:bg-green-500 hover:text-white transition-colors">
-                  {getDateLabel(day, index)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {nextDays.map((day) => (
-              <TabsContent key={day} value={day}>
-                <SlotGrid
-                  slots={slots}
-                  onSlotSelect={handleSlotSelect}
-                  selectedSlot={selectedSlot}
-                  bookedSlots={bookedSlots}
-                  selectedDate={day}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-
-          {/* Booking Modal */}
-          <AnimatePresence>
-            {selectedSlot && isModalOpen && (
+      {/* Booking Confirmation Modal */}
+      <AnimatePresence>
+        {selectedSlot && isModalOpen && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsModalOpen(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border-t-8 border-green-500 relative overflow-hidden"
+              initial={{ scale: 0.7, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.7, opacity: 0, y: 50 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <motion.div
-                className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.3, 0.2] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="absolute -top-20 -right-20 w-40 h-40 bg-green-500 rounded-full blur-3xl"
+              />
+
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex justify-center mb-4"
               >
-                <motion.div
-                  className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border-t-4 border-green-500"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                >
-                  <h2 className="text-2xl font-bold mb-3 text-green-600">Confirm Booking</h2>
-                  <p className="mb-4 text-gray-700">
-                    Court: <span className="font-medium">{court.name}</span><br/>
-                    Date: <span className="font-medium">{selectedDate}</span><br/>
-                    Time: <span className="font-medium">{selectedSlot.startTime} - {selectedSlot.endTime}</span>
-                  </p>
-                  <div className="flex justify-end gap-4 mt-4">
-                    <Button
-                      onClick={handleConfirmBooking}
-                      className="bg-green-600 hover:bg-green-700 transition-all transform active:scale-95"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "Booking..." : "Confirm"}
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                  </div>
-                </motion.div>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-4 rounded-full">
+                  <CheckCircle2 className="w-8 h-8 text-white" />
+                </div>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
+
+              <h2 className="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                Confirm Your Booking
+              </h2>
+
+              <div className="space-y-4 mb-6">
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500"
+                >
+                  <p className="text-sm text-gray-600 mb-1">Court</p>
+                  <p className="font-bold text-lg text-gray-800">{court.name}</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-500"
+                >
+                  <p className="text-sm text-gray-600 mb-1">Date</p>
+                  <p className="font-bold text-lg text-gray-800">{selectedDate}</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="bg-purple-50 p-4 rounded-xl border-l-4 border-purple-500"
+                >
+                  <p className="text-sm text-gray-600 mb-1">Time</p>
+                  <p className="font-bold text-lg text-gray-800">
+                    {selectedSlot.startTime} - {selectedSlot.endTime}
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="bg-yellow-50 p-4 rounded-xl border-l-4 border-yellow-500"
+                >
+                  <p className="text-sm text-gray-600 mb-1">Price</p>
+                  <p className="font-bold text-2xl text-gray-800">Rs {court.hourly_rate}</p>
+                </motion.div>
+              </div>
+
+              <div className="flex gap-3">
+                <motion.div className="flex-1">
+                  <Button
+                    onClick={handleConfirmBooking}
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        Booking...
+                      </span>
+                    ) : (
+                      "Confirm Booking"
+                    )}
+                  </Button>
+                </motion.div>
+
+                <motion.div className="flex-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 rounded-xl transition-all"
+                  >
+                    Cancel
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -98,6 +98,8 @@ class RegisterUser(Resource):
                 return {"status": "error", "message": "Email is required"}, 400
             if not data.get("password"):
                 return {"status": "error", "message": "Password is required"}, 400
+            if not data.get("phone_number"):
+                return {"status": "error", "message": "Phone Number is required"}, 400
 
             role = data.get("role")
             if role not in ["user", "admin", "court_owner"]:
@@ -113,7 +115,8 @@ class RegisterUser(Resource):
                 username=data["username"],
                 email=data["email"],
                 password_hash=hashed_password,
-                role=role
+                role=role,
+                phone_number=data["phone_number"]
             )
 
             db.session.add(new_user)

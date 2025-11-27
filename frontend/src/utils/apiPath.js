@@ -6,7 +6,10 @@ export const API_PATH = {
     },
     COURT: {
         REGISTER_COURT: "/courts/register", // POST
-        ALL_COURTS: "/courts/all", // GET
+        ALL_COURTS: "/courts/all",
+        COURT_ALL_COURTS_PENDING: "/courts/all/pending",
+        APPROVED_COURTS: "/courts/all/approved",
+
         COURTS_BY_USER: "/courts/byuser", // GET
         COURT_BY_ID: (id) => `/courts/${id}`, // GET
         UPDATE_COURT: (id) => `/courts/${id}`,

@@ -1,42 +1,61 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PlusCircle, CheckCircle, Calendar, Edit2, CreditCard } from "lucide-react"
 
 const FacilitiesGrid = () => {
   const items = [
-    { title: "Indo & Outdoor", desc: "All-weather indoor turf and open-air outdoor courts." },
-    { title: "Premium Turf", desc: "Shock-absorbing, non-slip surfaces for safe, fast play." },
-    { title: "LED Lighting", desc: "Even, glare-free illumination for night matches." },
-    { title: "Locker Rooms", desc: "Secure lockers, showers, and changing facilities." },
-    { title: "Hydration & Cafe", desc: "Water refill stations and on-site refreshments." },
-    { title: "Free Parking", desc: "Ample, well-lit parking adjacent to courts." },
-    { title: "Equipment Rental", desc: "Balls, bibs, cones, and goalkeeper gloves available." },
-    { title: "First Aid", desc: "Trained staff and first-aid kits on premises." },
+    {
+      title: "Add Court",
+      desc: "Admins can add new futsal courts with images and details.",
+      icon: <PlusCircle className="w-12 h-12 text-green-600 mx-auto" />
+    },
+    {
+      title: "Approval",
+      desc: "Pending courts can be reviewed and approved by the admin.",
+      icon: <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
+    },
+    {
+      title: "Book Slot",
+      desc: "Players can book available slots easily in real-time.",
+      icon: <Calendar className="w-12 h-12 text-green-600 mx-auto" />
+    },
+    ,
+    {
+      title: "Payment Gateway",
+      desc: "Secure online payments for hassle-free bookings.",
+      icon: <CreditCard className="w-12 h-12 text-green-600 mx-auto" />
+    },
   ]
 
-
-
   return (
-    <section className="mx-auto w-full max-w-6xl  mt-10 bg-black">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold tracking-tight md:text-4xl text-blue-400">Facilities & Amenities</h2>
-        <p className="mt-2 text-gray-500">
+    <section className="mx-auto w-full max-w-6xl mt-10">
+      {/* Title */}
+      <div className="mb-6 text-center">
+        <h2 className="text-4xl font-bold tracking-tight text-green-600">
+          Features & Amenities
+        </h2>
+        <p className="mt-2 text-gray-600">
           Everything you need for a great futsal experience—before, during, and after the match.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 bg-accent p-4 rounded-lg bg-black">
+      {/* Grid */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => (
-          <Card key={it.title} className="h-full bg-black  text-white">
+          <Card 
+            key={it.title} 
+            className="h-full bg-white border border-green-200 shadow-sm hover:shadow-md transition-all"
+          >
             <CardHeader>
-              <CardTitle className="text-lg text-blue-200">{it.title}</CardTitle>
-              <CardDescription>{it.desc}</CardDescription>
+              <CardTitle className="text-lg font-semibold text-green-600">
+                {it.title}
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                {it.desc}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <img
-                src={`https://source.unsplash.com/320x120/?${encodeURIComponent(it.title)}`}
-                alt={`${it.title} illustration`}
-                className="h-28 w-full rounded-md border object-cover"
-              />
+
+            <CardContent className="flex justify-center py-4">
+              {it.icon}
             </CardContent>
           </Card>
         ))}

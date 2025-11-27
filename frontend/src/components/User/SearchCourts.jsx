@@ -20,8 +20,26 @@ export default function SearchCourts() {
   const fetchCourts = async () => {
     try {
       setLoading(true);
+<<<<<<< Updated upstream
       const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, {
         withCredentials: true,
+=======
+      const res = await axiosInstance.get(API_PATH.COURT.APPROVED_COURTS, { withCredentials: true });
+      console.log(res)
+      const fetchedCourts = res.data.courts || [];
+
+      // Fetch current user ratings
+      const ratingsRes = await axiosInstance.get(API_PATH.REVIEWS.MY_REVIEWS, { withCredentials: true });
+      const myRatings = ratingsRes.data.reviews || [];
+
+      // Merge ratings into courts
+      const courtsWithRatings = fetchedCourts.map(court => {
+        const myRating = myRatings.find(r => r.court_id === court.id);
+        return {
+          ...court,
+          rating: myRating?.rating || 0
+        };
+>>>>>>> Stashed changes
       });
       setCourts(res.data.courts || []);
     } catch (err) {
@@ -53,6 +71,7 @@ export default function SearchCourts() {
   // -----------------------------
   const addFavourite = async (court_id) => {
     try {
+<<<<<<< Updated upstream
       await axiosInstance.post(
         API_PATH.FAVOURITES.ADD_FAVOURITE,
         { court_id },
@@ -61,6 +80,11 @@ export default function SearchCourts() {
 
       fetchFavourites(); // refresh fav list
       toast.success("Added to favourites");
+=======
+      await axiosInstance.post(API_PATH.FAVOURITES.ADD_FAVOURITE, { court_id }, { withCredentials: true });
+      fetchFavourites();
+      
+>>>>>>> Stashed changes
     } catch (err) {
       toast.error("Failed to add favourite");
     }
@@ -79,7 +103,7 @@ export default function SearchCourts() {
       });
 
       fetchFavourites();
-      toast.success("Removed from favourites");
+     
     } catch (err) {
       toast.error("Failed to remove favourite");
     }

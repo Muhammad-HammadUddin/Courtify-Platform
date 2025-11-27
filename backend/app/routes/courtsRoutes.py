@@ -110,20 +110,41 @@ class RegisterCourt(Resource):
             db.session.rollback()
             return {"error": "Something went wrong.", "details": str(e)}, 500
 
+<<<<<<< Updated upstream
 
 # -------------------------------
 # GET ALL COURTS
 # -------------------------------
+=======
+
+
+@courts_ns.route("/all")
+class AllCourts(Resource):
+    @courts_ns.doc("get all courts except pending")
+    def get(self):
+        try:
+            courts = Courts.query.filter().all()
+            return {"courts": [court_to_dict(c) for c in courts]}, 200
+        except Exception as e:
+            return {"error": "Something went wrong.", "details": str(e)}, 500
+
+
+>>>>>>> Stashed changes
 @courts_ns.route("/all/approved")
 class AllCourts(Resource):
     @courts_ns.doc("get all approved courts")
     def get(self):
         try:
+<<<<<<< Updated upstream
             # Fetch only courts where status is "approved"
             courts = Courts.query.filter_by(status="approved").all()
             
             result = [court_to_dict(c) for c in courts]
             return {"courts": result}, 200
+=======
+            courts = Courts.query.filter(Courts.status == "approved").all()
+            return {"courts": [court_to_dict(c) for c in courts]}, 200
+>>>>>>> Stashed changes
         except Exception as e:
             return {"error": "Something went wrong.", "details": str(e)}, 500
         
