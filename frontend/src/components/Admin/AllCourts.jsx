@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // adjust path
-import { Button } from "@/components/ui/button"; // adjust path
+import { useState, useEffect } from "react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +11,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-<<<<<<< Updated upstream
-} from "@/components/ui/dialog"; // adjust path
-import { courtsData } from "@/lib/admin-data"; // adjust path
-=======
 } from "@/components/ui/dialog";
-import { 
-  Trash2, 
-  MapPin, 
-  DollarSign, 
-  Tag, 
-  CheckCircle2, 
-  XCircle, 
+
+import {
+  Trash2,
+  MapPin,
+  DollarSign,
+  Tag,
+  CheckCircle2,
+  XCircle,
   Clock,
   Building2,
   Loader2,
@@ -27,35 +27,63 @@ import {
 } from "lucide-react";
 
 import { toast } from "react-toastify";
->>>>>>> Stashed changes
 
 export default function AllCourts() {
-  const [courts, setCourts] = useState(courtsData);
+  const [courts, setCourts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(null);
 
+  // Fetch all courts
+  useEffect(() => {
+    const fetchCourts = async () => {
+      try {
+        const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS);
+        console.log(res.data.courts)
+        setCourts(res.data.courts || []);
+      } catch (err) {
+        console.error("Error fetching courts:", err);
+        toast.error("Failed to load courts");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourts();
+  }, []);
+
+  // Open delete dialog
   const handleDeleteClick = (court) => {
     setSelectedCourt(court);
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (selectedCourt) {
-      setCourts(courts.filter((c) => c.id !== selectedCourt.id));
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!selectedCourt) return;
+
+    try {
+      await axiosInstance.delete(API_PATH.COURT.DELETE_COURT(selectedCourt.id));
+
+      // remove from UI
+      setCourts((prev) => prev.filter((c) => c.id !== selectedCourt.id));
+
+      toast.success("Court deleted successfully!");
+
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete court");
     }
+
     setDeleteDialogOpen(false);
     setSelectedCourt(null);
   };
 
-<<<<<<< Updated upstream
-=======
-  // -----------------------------------------
-  // ⬇️ Status badge helper
-  // -----------------------------------------
   const getStatusBadge = (status) => {
-    const statusLower = status.toLowerCase();
-    
-    if (statusLower === "approved") {
+    const s = status.toLowerCase();
+
+    if (s === "approved") {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -63,8 +91,8 @@ export default function AllCourts() {
         </span>
       );
     }
-    
-    if (statusLower === "rejected") {
+
+    if (s === "rejected") {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
           <XCircle className="w-3.5 h-3.5" />
@@ -72,7 +100,7 @@ export default function AllCourts() {
         </span>
       );
     }
-    
+
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
         <Clock className="w-3.5 h-3.5" />
@@ -81,9 +109,7 @@ export default function AllCourts() {
     );
   };
 
-  // -----------------------------------------
-  // ⬇️ Loading state
-  // -----------------------------------------
+  // Loading state
   if (loading) {
     return (
       <div className="py-20 flex flex-col items-center justify-center">
@@ -95,9 +121,7 @@ export default function AllCourts() {
     );
   }
 
-  // -----------------------------------------
-  // ⬇️ Empty state
-  // -----------------------------------------
+  // Empty state
   if (courts.length === 0) {
     return (
       <div className="py-20 flex flex-col items-center justify-center">
@@ -110,9 +134,9 @@ export default function AllCourts() {
     );
   }
 
->>>>>>> Stashed changes
   return (
     <div className="w-full space-y-4">
+
       {/* Stats Header */}
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100">
         <div className="flex items-center justify-between">
@@ -125,112 +149,82 @@ export default function AllCourts() {
               <p className="text-2xl font-bold text-gray-900">{courts.length}</p>
             </div>
           </div>
-          
+
           <div className="flex gap-4">
             <div className="text-right">
               <p className="text-xs text-emerald-600 font-medium">Approved</p>
               <p className="text-lg font-bold text-emerald-700">
-                {courts.filter(c => c.status.toLowerCase() === 'approved').length}
+                {courts.filter(c => c.status.toLowerCase() === "approved").length}
               </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-amber-600 font-medium">Pending</p>
               <p className="text-lg font-bold text-amber-700">
-                {courts.filter(c => c.status.toLowerCase() === 'pending').length}
+                {courts.filter(c => c.status.toLowerCase() === "pending").length}
               </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-red-600 font-medium">Rejected</p>
               <p className="text-lg font-bold text-red-700">
-                {courts.filter(c => c.status.toLowerCase() === 'rejected').length}
+                {courts.filter(c => c.status.toLowerCase() === "rejected").length}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Courts Table */}
       <div className="rounded-2xl border-2 border-emerald-100 bg-white shadow-lg overflow-hidden">
         <Table>
           <TableHeader>
-<<<<<<< Updated upstream
-            <TableRow className="border-border hover:bg-card">
-              <TableHead className="text-foreground">Court Name</TableHead>
-              <TableHead className="text-foreground">Location</TableHead>
-              <TableHead className="text-foreground">Owner Name</TableHead>
-              <TableHead className="text-foreground">Price/Hour</TableHead>
-              <TableHead className="text-foreground">Type</TableHead>
-              <TableHead className="text-foreground">Status</TableHead>
-              <TableHead className="text-foreground">Action</TableHead>
-=======
-            <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b-2 border-emerald-100 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50">
+            <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b-2 border-emerald-100">
               <TableHead className="text-emerald-900 font-bold">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Court Name
+                  <Building2 className="w-4 h-4" /> Court Name
                 </div>
               </TableHead>
               <TableHead className="text-emerald-900 font-bold">
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Location
+                  <MapPin className="w-4 h-4" /> Location
                 </div>
               </TableHead>
               <TableHead className="text-emerald-900 font-bold">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Price/Hour
+                  <DollarSign className="w-4 h-4" /> Price/Hour
                 </div>
               </TableHead>
               <TableHead className="text-emerald-900 font-bold">
                 <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4" />
-                  Type
+                  <Tag className="w-4 h-4" /> Type
                 </div>
               </TableHead>
               <TableHead className="text-emerald-900 font-bold">Status</TableHead>
               <TableHead className="text-emerald-900 font-bold">Action</TableHead>
->>>>>>> Stashed changes
             </TableRow>
           </TableHeader>
+
           <TableBody>
-<<<<<<< Updated upstream
             {courts.map((court) => (
-              <TableRow key={court.id} className="border-border hover:bg-muted">
-                <TableCell className="text-foreground">{court.name}</TableCell>
-                <TableCell className="text-foreground">{court.location}</TableCell>
-                <TableCell className="text-foreground">{court.owner_name}</TableCell>
-                <TableCell className="text-foreground">${court.hourly_rate}</TableCell>
-                <TableCell className="text-foreground">{court.type}</TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-200">
-                    {court.status}
-                  </span>
-                </TableCell>
-=======
-            {courts.map((court, index) => (
-              <TableRow 
-                key={court.id} 
-                className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-teal-50/50 transition-all duration-300 group"
+              <TableRow
+                key={court.id}
+                className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-teal-50/50 transition-all"
               >
-                <TableCell className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
-                  {court.name}
-                </TableCell>
-                
+                <TableCell className="font-semibold text-gray-900">{court.name}</TableCell>
+
                 <TableCell className="text-gray-600">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-emerald-500" />
                     {court.location}
                   </div>
                 </TableCell>
-                
+
                 <TableCell className="text-gray-600">
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-4 h-4 text-emerald-500" />
                     <span className="font-semibold text-gray-900">{court.hourly_rate}</span>
                   </div>
                 </TableCell>
-                
+
                 <TableCell>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border border-emerald-200">
                     <Tag className="w-3 h-3" />
@@ -238,19 +232,16 @@ export default function AllCourts() {
                   </span>
                 </TableCell>
 
-                <TableCell>
-                  {getStatusBadge(court.status)}
-                </TableCell>
+                <TableCell>{getStatusBadge(court.status)}</TableCell>
 
->>>>>>> Stashed changes
                 <TableCell>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-50 hover:text-red-700 border border-transparent hover:border-red-200 rounded-lg transition-all duration-300 group/btn"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700 border hover:border-red-200 rounded-lg"
                     onClick={() => handleDeleteClick(court)}
                   >
-                    <Trash2 className="w-4 h-4 mr-1.5 group-hover/btn:scale-110 transition-transform" />
+                    <Trash2 className="w-4 h-4 mr-1.5" />
                     Delete
                   </Button>
                 </TableCell>
@@ -260,34 +251,26 @@ export default function AllCourts() {
         </Table>
       </div>
 
+      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="bg-white border-2 border-red-100 rounded-2xl shadow-2xl sm:max-w-[500px]">
           <DialogHeader>
-<<<<<<< Updated upstream
-            <DialogTitle className="text-foreground">Delete Court</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Are you sure you want to delete {selectedCourt?.name}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-=======
             <DialogTitle className="text-2xl text-gray-900 flex items-center gap-3">
               <div className="bg-red-100 p-3 rounded-xl">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               Delete Court
             </DialogTitle>
+
             <DialogDescription className="text-gray-600 pt-4">
               <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4">
-                <p className="font-medium text-red-800 mb-2">
-                  ⚠️ This action cannot be undone
-                </p>
+                <p className="font-medium text-red-800 mb-2">⚠️ This action cannot be undone</p>
                 <p className="text-sm text-red-700">
                   Are you sure you want to permanently delete{" "}
-                  <strong className="font-bold">{selectedCourt?.name}</strong>?
+                  <strong>{selectedCourt?.name}</strong>?
                 </p>
               </div>
-              
+
               {selectedCourt && (
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-gray-600">
@@ -304,7 +287,6 @@ export default function AllCourts() {
           </DialogHeader>
 
           <DialogFooter className="gap-2 pt-4">
->>>>>>> Stashed changes
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
@@ -312,10 +294,11 @@ export default function AllCourts() {
             >
               Cancel
             </Button>
+
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-md"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Permanently

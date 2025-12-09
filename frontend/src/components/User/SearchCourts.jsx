@@ -6,52 +6,53 @@ import { API_PATH } from "@/utils/apiPath.js";
 
 export default function SearchCourts() {
   const [courts, setCourts] = useState([]);
-  const [favourites, setFavourites] = useState([]); // ⭐ NEW
+  const [favourites, setFavourites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [favLoading, setFavLoading] = useState(false); // ⭐ NEW
+  const [favLoading, setFavLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSport, setSelectedSport] = useState("all");
 
   const sports = ["all", "Football", "Badminton", "Tennis", "Basketball", "Volleyball", "Cricket"];
 
-  // -----------------------------
+  //----------------------------------
   // Fetch COURTS
-  // -----------------------------
+  //----------------------------------
   const fetchCourts = async () => {
     try {
       setLoading(true);
-<<<<<<< Updated upstream
-      const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, {
-        withCredentials: true,
-=======
-      const res = await axiosInstance.get(API_PATH.COURT.APPROVED_COURTS, { withCredentials: true });
-      console.log(res)
+
+      const res = await axiosInstance.get(API_PATH.COURT.ALL_COURTS, { withCredentials: true });
+      console.log(res);
+
       const fetchedCourts = res.data.courts || [];
 
-      // Fetch current user ratings
-      const ratingsRes = await axiosInstance.get(API_PATH.REVIEWS.MY_REVIEWS, { withCredentials: true });
+      // Fetch my ratings
+      const ratingsRes = await axiosInstance.get(API_PATH.REVIEWS.MY_REVIEWS, {
+        withCredentials: true,
+      });
       const myRatings = ratingsRes.data.reviews || [];
 
-      // Merge ratings into courts
-      const courtsWithRatings = fetchedCourts.map(court => {
-        const myRating = myRatings.find(r => r.court_id === court.id);
+      // Merge ratings with courts
+      const courtsWithRatings = fetchedCourts.map((court) => {
+        const myRating = myRatings.find((r) => r.court_id === court.id);
         return {
           ...court,
-          rating: myRating?.rating || 0
+          rating: myRating?.rating || 0,
         };
->>>>>>> Stashed changes
       });
-      setCourts(res.data.courts || []);
+
+      setCourts(courtsWithRatings);
     } catch (err) {
       toast.error("Failed to fetch courts");
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // -----------------------------
+  //----------------------------------
   // Fetch FAVOURITES
-  // -----------------------------
+  //----------------------------------
   const fetchFavourites = async () => {
     try {
       setFavLoading(true);
@@ -66,33 +67,27 @@ export default function SearchCourts() {
     }
   };
 
-  // -----------------------------
-  // Add favourite
-  // -----------------------------
+  //----------------------------------
+  // ADD Favourite
+  //----------------------------------
   const addFavourite = async (court_id) => {
     try {
-<<<<<<< Updated upstream
       await axiosInstance.post(
         API_PATH.FAVOURITES.ADD_FAVOURITE,
         { court_id },
         { withCredentials: true }
       );
 
-      fetchFavourites(); // refresh fav list
-      toast.success("Added to favourites");
-=======
-      await axiosInstance.post(API_PATH.FAVOURITES.ADD_FAVOURITE, { court_id }, { withCredentials: true });
       fetchFavourites();
-      
->>>>>>> Stashed changes
+      toast.success("Added to favourites");
     } catch (err) {
       toast.error("Failed to add favourite");
     }
   };
 
-  // -----------------------------
-  // Remove favourite
-  // -----------------------------
+  //----------------------------------
+  // REMOVE Favourite
+  //----------------------------------
   const removeFavourite = async (court_id) => {
     try {
       const fav = favourites.find((f) => f.court_id === court_id);
@@ -103,23 +98,22 @@ export default function SearchCourts() {
       });
 
       fetchFavourites();
-     
     } catch (err) {
       toast.error("Failed to remove favourite");
     }
   };
 
-  // -----------------------------
-  // Load everything initially
-  // -----------------------------
+  //----------------------------------
+  // Load on Mount
+  //----------------------------------
   useEffect(() => {
     fetchCourts();
     fetchFavourites();
   }, []);
 
-  // -----------------------------
-  // Filter courts
-  // -----------------------------
+  //----------------------------------
+  // Filter Courts
+  //----------------------------------
   const filteredCourts = courts.filter((court) => {
     const matchesSearch =
       court.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -127,7 +121,7 @@ export default function SearchCourts() {
 
     const matchesSport =
       selectedSport === "all" ||
-      court.type.toLowerCase() === selectedSport.toLowerCase();
+      court.type?.toLowerCase() === selectedSport.toLowerCase();
 
     return matchesSearch && matchesSport;
   });
@@ -153,7 +147,7 @@ export default function SearchCourts() {
         </button>
       </div>
 
-      {/* Sport Filter */}
+      {/* Sports Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {sports.map((sport) => (
           <button

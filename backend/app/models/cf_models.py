@@ -6,20 +6,12 @@ from datetime import time, datetime
 
 # ENUMS
 user_role_enum = ENUM("user", "admin", "court_owner", name="user_role", create_type=True)
-<<<<<<< Updated upstream
-court_status_enum = ENUM("approved", "rejected","pending", name="court_status", create_type=True)
-booking_status_enum = ENUM("confirmed", "cancelled", "completed", "pending", name="booking_status", create_type=True)
-payment_method_enum = ENUM("stripe", name="payment_method", create_type=True)
-payment_status_enum = ENUM("pending", "successful", "failed", name="payment_status", create_type=True)
-notification_enum = ENUM("email", name="notification_channel", create_type=True)
-=======
 court_status_enum = ENUM("approved", "rejected", "pending", name="court_status", create_type=True)
 booking_status_enum = ENUM("approved", "rejected", "completed", "pending", "cancelled", "confirmed", name="booking_status", create_type=True)
 payment_method_enum = ENUM("stripe", "card", name="payment_method", create_type=True)
 
 # 🔥 notification ENUM removed
 
->>>>>>> Stashed changes
 
 # =========================
 # Users Table
@@ -28,6 +20,7 @@ class Users(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
+    img_url=db.Column(db.String(100),nullable=True)
     username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -58,12 +51,9 @@ class Users(db.Model):
                               cascade="all, delete-orphan", passive_deletes=True)
 
 
-<<<<<<< Updated upstream
 # =========================
 # Courts Table
 # =========================
-=======
->>>>>>> Stashed changes
 class Courts(db.Model):
     __tablename__ = "courts"
 
@@ -126,6 +116,7 @@ class Bookings(db.Model):
     remaining_cash = db.Column(db.Numeric(10, 2), nullable=False, default=0.00)
     cancellation_reason = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     __table_args__ = (
         db.UniqueConstraint(
             'court_id',
@@ -150,13 +141,9 @@ class Payments(db.Model):
     amount = db.Column(db.Numeric(10, 2), nullable=False, default=0.00)
     payment_method = db.Column(payment_method_enum, nullable=False)
     transaction_id = db.Column(db.String(100))
-    payment_status = db.Column(payment_status_enum, nullable=False, default="pending")
+    payment_status = db.Column(db.String(20), nullable=False, default="pending")
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
-<<<<<<< Updated upstream
-    
-=======
     currency = db.Column(db.String(10), nullable=False, default="USD")
->>>>>>> Stashed changes
 
 
 class Matchmaking(db.Model):
@@ -172,12 +159,9 @@ class Matchmaking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-<<<<<<< Updated upstream
 # =========================
 # Favourites Table
 # =========================
-=======
->>>>>>> Stashed changes
 class Favourites(db.Model):
     __tablename__ = "favourites"
 

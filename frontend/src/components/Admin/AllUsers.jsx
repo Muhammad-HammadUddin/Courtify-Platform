@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // adjust path
-import { Button } from "@/components/ui/button"; // adjust path
-import { Input } from "@/components/ui/input"; // adjust path
+
+import  { useState, useEffect, useMemo } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-<<<<<<< Updated upstream
-} from "@/components/ui/dialog"; // adjust path
-import { usersData } from "@/lib/admin-data"; // adjust path
-=======
 } from "@/components/ui/dialog";
 import { 
   Search, 
@@ -30,18 +27,35 @@ import {
 import axiosInstance from "@/utils/axios";
 import { API_PATH } from "@/utils/apiPath";
 import { toast } from "react-toastify";
->>>>>>> Stashed changes
 
 export default function AllUsers() {
-  const [users, setUsers] = useState(usersData);
+  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []); // FIXED
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(API_PATH.ADMIN.GET_ALL_USERS, { withCredentials: true });
+      setUsers(res.data.users || []);
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     return users.filter(
       (user) =>
-        user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
@@ -51,22 +65,32 @@ export default function AllUsers() {
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmRemove = () => {
-    if (selectedUser) {
-      setUsers(users.filter((u) => u.id !== selectedUser.id));
+  const handleConfirmRemove = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await axiosInstance.delete(
+        API_PATH.ADMIN.DELETE_USER(selectedUser.user_id),
+        { withCredentials: true }
+      );
+
+      toast.success(`${selectedUser.username} deleted successfully`);
+
+      // FIXED (user_id instead of id)
+      setUsers(users.filter((u) => u.user_id !== selectedUser.user_id));
+    } catch (err) {
+      console.log(err)
+      toast.error("Failed to delete user");
+    } finally {
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
     }
-    setDeleteDialogOpen(false);
-    setSelectedUser(null);
   };
 
   const getRoleBadge = (role) => {
     switch (role) {
       case "admin":
-<<<<<<< Updated upstream
-        return "bg-purple-900 text-purple-200";
-      case "owner":
-        return "bg-blue-900 text-blue-200";
-=======
         return {
           color: "bg-purple-100 text-purple-700 border-purple-200",
           icon: Shield,
@@ -78,7 +102,6 @@ export default function AllUsers() {
           icon: Building2,
           label: "Court Owner"
         };
->>>>>>> Stashed changes
       default:
         return {
           color: "bg-gray-100 text-gray-700 border-gray-200",
@@ -88,19 +111,15 @@ export default function AllUsers() {
     }
   };
 
-<<<<<<< Updated upstream
-  return (
-    <div className="w-full space-y-4">
-      <div className="flex gap-2">
-=======
   const roleStats = useMemo(() => {
-    return {
-      total: users.length,
-      admins: users.filter(u => u.role === 'admin').length ?0 :1,
-      owners: users.filter(u => u.role === 'court_owner').length,
-      regular: users.filter(u => u.role === 'user').length,
-    };
-  }, [users]);
+  return {
+    total: users.length,
+    admins: users.filter(u => u.role === "admin").length,
+    owners: users.filter(u => u.role === "court_owner").length,
+    regular: users.filter(u => u.role === "user").length,
+  };
+}, [users]);
+
 
   if (loading) {
     return (
@@ -124,7 +143,8 @@ export default function AllUsers() {
             </div>
             <div>
               <p className="text-sm text-gray-600 font-medium">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{roleStats.total+1}</p>
+              <p className="text-2xl font-bold text-gray-900">{roleStats.total}</p>
+
             </div>
           </div>
         </div>
@@ -169,55 +189,10 @@ export default function AllUsers() {
       {/* Search Bar */}
       <div className="relative max-w-md">
         <Search className="absolute top-1/2 -translate-y-1/2 left-4 w-5 h-5 text-emerald-400" />
->>>>>>> Stashed changes
         <Input
-          placeholder="Search by name or email..."
+          placeholder="Search by username or email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-<<<<<<< Updated upstream
-          className="bg-input border-border text-foreground placeholder:text-muted-foreground"
-        />
-      </div>
-
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-card">
-              <TableHead className="text-foreground">Full Name</TableHead>
-              <TableHead className="text-foreground">Email</TableHead>
-              <TableHead className="text-foreground">Role</TableHead>
-              <TableHead className="text-foreground">Phone</TableHead>
-              <TableHead className="text-foreground">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id} className="border-border hover:bg-muted">
-                <TableCell className="text-foreground">{user.full_name}</TableCell>
-                <TableCell className="text-foreground">{user.email}</TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                      user.role
-                    )}`}
-                  >
-                    {user.role}
-                  </span>
-                </TableCell>
-                <TableCell className="text-foreground">{user.phone}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-400 hover:bg-red-950 hover:text-red-300"
-                    onClick={() => handleRemoveClick(user)}
-                  >
-                    🗑️ Remove
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-=======
           className="pl-12 h-12 rounded-xl border-2 border-emerald-100 focus:border-emerald-500 focus:ring-emerald-500 bg-white shadow-sm transition-all duration-300"
         />
       </div>
@@ -308,52 +283,23 @@ export default function AllUsers() {
                 </TableRow>
               );
             })}
->>>>>>> Stashed changes
           </TableBody>
         </Table>
       </div>
 
       {/* Empty State */}
       {filteredUsers.length === 0 && (
-<<<<<<< Updated upstream
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">No users found</p>
-=======
         <div className="py-20 flex flex-col items-center justify-center">
           <div className="bg-gradient-to-br from-gray-100 to-gray-200 w-24 h-24 rounded-full flex items-center justify-center mb-4">
             <UserX className="w-12 h-12 text-gray-400" />
           </div>
           <p className="text-gray-600 text-lg font-medium">No users found</p>
           <p className="text-gray-400 text-sm mt-2">Try adjusting your search query</p>
->>>>>>> Stashed changes
         </div>
       )}
 
       {/* Remove User Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-<<<<<<< Updated upstream
-        <DialogContent className="bg-card border border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Remove User</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Are you sure you want to remove {selectedUser?.full_name} from the system? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              className="border-border text-foreground hover:bg-muted"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmRemove}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Remove
-=======
         <DialogContent className="bg-white border-2 border-red-100 rounded-2xl shadow-2xl sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-2xl text-gray-900 flex items-center gap-3">
@@ -404,7 +350,6 @@ export default function AllUsers() {
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Remove User
->>>>>>> Stashed changes
             </Button>
           </DialogFooter>
         </DialogContent>

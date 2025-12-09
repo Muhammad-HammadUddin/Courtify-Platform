@@ -1,11 +1,12 @@
 from flask import request
 from flask_restx import Resource
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity,get_jwt
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-from app import bookings_ns, db
-from app.models.cf_models import Bookings, Courts  # Make sure your models are correct
-
+from app import bookings_ns, db,mail
+from app.models.cf_models import Bookings, Courts,Users  # Make sure your models are correct
+from flask_mail import Message
+import os
 # -------------------------------
 # Helper function to serialize booking with court details
 # -------------------------------
@@ -47,21 +48,29 @@ def booking_to_dict(booking, court=None):
 class CreateBooking(Resource):
     @jwt_required()
     def post(self):
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         data = request.json
 
         try:
+            # -------------------------
             # Parse date/time
+            # -------------------------
             booking_date = datetime.strptime(data["booking_date"], "%Y-%m-%d").date()
             start_time = datetime.strptime(data["start_time"], "%H:%M").time()
             end_time = datetime.strptime(data["end_time"], "%H:%M").time()
 
-            # Fetch court to get hourly rate
+            # -------------------------
+            # Fetch court by ID
+            # -------------------------
             court = Courts.query.get_or_404(data["court_id"])
-            total_amount = float(court.hourly_rate)  # Use court hourly rate
+
+            total_amount = float(court.hourly_rate)
             advance_payment = 0.00
             remaining_cash = total_amount - advance_payment
 
+            # -------------------------
+            # Create booking
+            # -------------------------
             booking = Bookings(
                 user_id=user_id,
                 court_id=court.id,
@@ -77,15 +86,78 @@ class CreateBooking(Resource):
             db.session.add(booking)
             db.session.commit()
 
-            return {"message": "Booking created successfully", "booking": booking_to_dict(booking)}, 201
+            # -------------------------
+            # Fetch user & owner USING IDs
+            # -------------------------
+            user = Users.query.get(user_id)
+            owner = Users.query.get(court.owner_id)  # <--- Court owner id
+
+            # -------------------------
+            # Email to the user
+            # -------------------------
+            msg_user = Message(
+                subject="Courtify: Booking Received",
+                sender=os.getenv("DEL_EMAIL"),
+                recipients=[user.email]
+            )
+
+            msg_user.html = f"""
+            <div style="font-family:Arial,sans-serif; max-width:600px; margin:20px auto; padding:20px; background-color:#f9f9f9; border-radius:8px; text-align:center;">
+                <h2 style="color:#4f46e5;">Hello {user.username}!</h2>
+                <p>Thank you for booking <strong>{court.name.title()}</strong>.</p>
+                <p>Your booking is <strong>pending approval</strong> from the court owner.</p>
+                <p>
+                    <strong>Date:</strong> {booking.booking_date}<br/>
+                    <strong>Time:</strong> {booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}<br/>
+                    <strong>Total Amount:</strong> ${booking.total_amount}
+                </p>
+            </div>
+            """
+
+            mail.send(msg_user)
+
+            # -------------------------
+            # Email to court owner
+            # -------------------------
+            msg_owner = Message(
+                subject="Courtify: New Booking Request",
+                sender=os.getenv("DEL_EMAIL"),
+                recipients=[owner.email]
+            )
+
+            msg_owner.html = f"""
+            <div style="font-family:Arial,sans-serif; max-width:600px; margin:20px auto; padding:20px; background-color:#f9f9f9; border-radius:8px; text-align:center;">
+                <h2 style="color:#4f46e5;">Hello {owner.username}!</h2>
+                <p>A new booking request has been made for your court <strong>{court.name.title()}</strong>.</p>
+                <p>
+                    <strong>User:</strong> {user.username} ({user.email})<br/>
+                    <strong>Date:</strong> {booking.booking_date}<br/>
+                    <strong>Time:</strong> {booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}<br/>
+                    <strong>Total Amount:</strong> ${booking.total_amount}
+                </p>
+            </div>
+            """
+
+            mail.send(msg_owner)
+
+            # -------------------------
+            # Success Response
+            # -------------------------
+            return {
+                "message": "Booking created successfully",
+                "booking": booking_to_dict(booking)
+            }, 201
 
         except IntegrityError:
             db.session.rollback()
             return {"error": "Court is already booked for this slot"}, 409
+
         except KeyError as e:
             return {"error": f"Missing field {str(e)}"}, 400
+
         except ValueError as e:
             return {"error": "Invalid date/time format", "details": str(e)}, 400
+
         except Exception as e:
             db.session.rollback()
             return {"error": "Failed to create booking", "details": str(e)}, 500
@@ -125,6 +197,9 @@ class BookingById(Resource):
 # -------------------------------
 # Cancel booking with reason
 # -------------------------------
+from flask_mail import Message
+import os
+
 @bookings_ns.route("/cancel/<int:booking_id>")
 class CancelBooking(Resource):
     @jwt_required()
@@ -132,32 +207,75 @@ class CancelBooking(Resource):
         booking = Bookings.query.get_or_404(booking_id)
         data = request.json or {}
 
+        # Debugging
+        print("DEBUG: Current booking status =", booking.booking_status)
+
+        if booking.booking_status in ["completed", "cancelled"]:
+            return {"error": "This booking cannot be cancelled."}, 400
+
         try:
+            # Update booking status
             booking.booking_status = "cancelled"
             booking.cancellation_reason = data.get("cancellation_reason", "")
             db.session.commit()
+
+            # Fetch court + owner
             court = Courts.query.get(booking.court_id)
-            return {"message": "Booking cancelled", "booking": booking_to_dict(booking, court)}, 200
+            owner = Users.query.get(court.owner_id)
+
+            owner_email = owner.email if owner else None
+            owner_name = owner.username if owner else "Court Owner"
+
+            
+            msg = Message(
+                subject=f"Booking #{booking.id} Cancelled",
+                sender=os.getenv("MAIL_USERNAME"),
+                recipients=[owner_email],
+            )
+
+            msg.html = f"""
+            <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                <h2 style="color: #BF5C10;">Booking Cancelled</h2>
+
+                <p>Hello <strong>{owner_name}</strong>,</p>
+
+                <p>The booking <strong>#{booking.id}</strong> for your court 
+                "<strong>{court.name}</strong>" has been 
+                <span style="color: red; font-weight: bold;">cancelled</span> by the user.</p>
+
+                <p><strong>Reason:</strong> {booking.cancellation_reason or 'No reason provided'}</p>
+
+                <hr style="border: none; border-top: 1px solid #ccc;"/>
+
+                <p style="color: #555;">Best regards,<br/>Courtify Team</p>
+            </div>
+            """
+
+            mail.send(msg)
+
+            return {
+                "message": "Booking cancelled & email sent.",
+                "booking": booking_to_dict(booking, court),
+            }, 200
+
         except Exception as e:
             db.session.rollback()
-            return {"error": "Failed to cancel booking", "details": str(e)}, 500
+            return {
+                "error": "Failed to cancel booking",
+                "details": str(e),
+            }, 500
 
-# -------------------------------
-# Get all bookings for a specific court
-# -------------------------------
+
 @bookings_ns.route("/bycourt/<int:court_id>")
 class BookingsByCourt(Resource):
     @jwt_required()
     def get(self, court_id):
         try:
-<<<<<<< Updated upstream
-            bookings = Bookings.query.filter_by(court_id=court_id).all()
-=======
             # Court exists?
             court = Courts.query.get_or_404(court_id)
 
             # Only ACTIVE bookings fetch karo
-            active_status = ["pending", "approved","confirmed", "completed"]
+            active_status = ["pending", "approved"]
 
             bookings = (
                 Bookings.query
@@ -195,16 +313,21 @@ class AllBookingsWithCourts(Resource):
                 .all()
             )
 
->>>>>>> Stashed changes
             result = []
-            for b in bookings:
-                court = Courts.query.get(b.court_id)
-                result.append(booking_to_dict(b, court))
+            for booking, court, user in records:
+                # merge user info
+                data = booking_to_dict(booking, court)
+                data["user"] = {
+                    "id": user.id,
+                    "name": user.username,
+                    "email": user.email,
+                    "phone": user.phone_number if hasattr(user, "phone") else None
+                }
+                result.append(data)
+
             return {"bookings": result}, 200
+
         except Exception as e:
-<<<<<<< Updated upstream
-            return {"error": "Failed to fetch bookings for this court", "details": str(e)}, 500
-=======
             return {"error": "Failed to fetch bookings", "details": str(e)}, 500
         
 
@@ -305,11 +428,9 @@ class ApproveBooking(Resource):
 
             msg_user.html = f"""
             <div style="font-family:Arial; max-width:600px; margin:20px auto; padding:20px; background:#e8f5e9; border-radius:8px;">
-                <h2 style="color:#2e7d32; text-align:center;">Booking Approved </h2>
-                
+                <h2 style="color:#2e7d32; text-align:center;">Booking Approved</h2>
                 <p>Hello {user.username},</p>
                 <p>Your booking for <strong>{court.name.title()}</strong> has been <strong>approved</strong>!</p>
-                <p> Pay advance to avoid cancellation!</p>
 
                 <p><strong>Date:</strong> {booking.booking_date}<br/>
                 <strong>Time:</strong> {booking.start_time} - {booking.end_time}</p>
@@ -326,4 +447,3 @@ class ApproveBooking(Resource):
         except Exception as e:
             db.session.rollback()
             return {"error": "Failed to approve booking", "details": str(e)}, 500
->>>>>>> Stashed changes

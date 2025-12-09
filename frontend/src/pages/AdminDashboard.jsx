@@ -1,14 +1,10 @@
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // adjust path
+import  { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardStats from "@/components/Admin/DashboardStats";
 import AllCourts from "@/components/Admin/AllCourts";
 import AdminApprovals from "@/components/Admin/Approval";
 import AllUsers from "@/components/Admin/AllUsers";
-<<<<<<< Updated upstream
- // adjust path
-=======
 import { Building2, CheckSquare, Users, BarChart3, Shield } from "lucide-react";
->>>>>>> Stashed changes
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("courts");
@@ -16,8 +12,8 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        
-        {/* Header Section with Gradient */}
+
+        {/* Header Section */}
         <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 rounded-3xl shadow-xl p-8 text-white">
           <div className="flex items-center gap-4">
             <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl border border-white/30">
@@ -31,15 +27,6 @@ export default function AdminDashboard() {
         </div>
 
         {/* Dashboard Stats Section */}
-<<<<<<< Updated upstream
-        <div className="px-6 py-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Dashboard Stats</h2>
-          <DashboardStats />
-        </div>
-
-        {/* Tabs Navigation */}
-        <div className="px-6 py-8 border-t border-border">
-=======
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-emerald-400 to-teal-400 p-3 rounded-xl shadow-md">
@@ -52,64 +39,75 @@ export default function AdminDashboard() {
 
         {/* Tabs Section */}
         <div className="bg-white rounded-3xl shadow-xl border-0 overflow-hidden">
->>>>>>> Stashed changes
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            
-            {/* Enhanced Tabs List */}
+
+            {/* Tabs List */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 p-6">
               <TabsList className="grid w-full grid-cols-3 bg-white rounded-2xl p-2 shadow-md border border-emerald-100">
+
                 <TabsTrigger
                   value="courts"
-                  className="flex items-center gap-2 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:via-teal-500 data-[state=active]:to-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 py-3"
+                  className="flex items-center gap-2 rounded-xl transition-all duration-300 
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 
+                  data-[state=active]:via-teal-500 data-[state=active]:to-green-500 
+                  data-[state=active]:text-white data-[state=active]:shadow-lg 
+                  data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r 
+                  hover:from-emerald-50 hover:to-teal-50 py-3"
                 >
                   <Building2 className="w-4 h-4" />
                   <span className="font-semibold">Courts</span>
                 </TabsTrigger>
-                
+
                 <TabsTrigger
                   value="approvals"
-                  className="flex items-center gap-2 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:via-teal-500 data-[state=active]:to-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 py-3"
+                  className="flex items-center gap-2 rounded-xl transition-all duration-300 
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 
+                  data-[state=active]:via-teal-500 data-[state=active]:to-green-500 
+                  data-[state=active]:text-white data-[state=active]:shadow-lg 
+                  data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r 
+                  hover:from-emerald-50 hover:to-teal-50 py-3"
                 >
                   <CheckSquare className="w-4 h-4" />
                   <span className="font-semibold">Approvals</span>
                 </TabsTrigger>
-                
+
                 <TabsTrigger
                   value="users"
-                  className="flex items-center gap-2 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:via-teal-500 data-[state=active]:to-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 py-3"
+                  className="flex items-center gap-2 rounded-xl transition-all duration-300 
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 
+                  data-[state=active]:via-teal-500 data-[state=active]:to-green-500 
+                  data-[state=active]:text-white data-[state=active]:shadow-lg 
+                  data-[state=active]:scale-105 text-gray-700 hover:bg-gradient-to-r 
+                  hover:from-emerald-50 hover:to-teal-50 py-3"
                 >
                   <Users className="w-4 h-4" />
                   <span className="font-semibold">Users</span>
                 </TabsTrigger>
+
               </TabsList>
             </div>
 
-<<<<<<< Updated upstream
             {/* Tab Contents */}
-            <div className="mt-8">
-              <TabsContent value="courts">
-=======
-            {/* Tab Content with Padding */}
             <div className="p-6">
-              <TabsContent value="courts" className="mt-0">
->>>>>>> Stashed changes
+              <TabsContent value="courts">
                 <AllCourts />
               </TabsContent>
-              
-              <TabsContent value="approvals" className="mt-0">
+
+              <TabsContent value="approvals">
                 <AdminApprovals />
               </TabsContent>
-              
-              <TabsContent value="users" className="mt-0">
+
+              <TabsContent value="users">
                 <AllUsers />
               </TabsContent>
             </div>
+
           </Tabs>
         </div>
 
       </div>
 
-      {/* Decorative Background Elements */}
+      {/* Soft Blurred Backgrounds */}
       <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-to-br from-emerald-200/20 to-teal-200/20 rounded-full blur-3xl -z-10 pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-green-200/20 to-emerald-200/20 rounded-full blur-3xl -z-10 pointer-events-none"></div>
     </div>

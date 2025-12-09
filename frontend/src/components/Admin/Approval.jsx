@@ -1,10 +1,4 @@
-<<<<<<< Updated upstream
-import React, { useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"; // adjust path
-import { Button } from "@/components/ui/button"; // adjust path
-import { pendingCourtsData } from "@/lib/admin-data.js"; // adjust path
-=======
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import axiosInstance from "@/utils/axios";
 import { API_PATH } from "@/utils/apiPath";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,20 +16,24 @@ import {
   ImageOff
 } from "lucide-react";
 import { toast } from "react-toastify";
->>>>>>> Stashed changes
 
 export default function AdminApprovals() {
-  const [courts, setCourts] = useState(pendingCourtsData);
+  const [courts, setCourts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleApprove = (id) => {
-    setCourts(courts.filter((c) => c.id !== id));
-  };
+  // Fetch pending courts
+  useEffect(() => {
+    const fetchPendingCourts = async () => {
+      try {
+        const res = await axiosInstance.get(API_PATH.ADMIN.GET_ALL_COURTS_PENDING);
+        setCourts(res.data.courts || []);
+      } catch (err) {
+        console.error("Error fetching pending courts:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-<<<<<<< Updated upstream
-  const handleReject = (id) => {
-    setCourts(courts.filter((c) => c.id !== id));
-  };
-=======
     fetchPendingCourts();
   }, []);
 
@@ -43,7 +41,7 @@ export default function AdminApprovals() {
   const handleApprove = async (courtId) => {
     try {
       await axiosInstance.put(API_PATH.ADMIN.UPDATE_COURT_STATUS(courtId), {
-        status: "approved"
+        status: "approved",
       });
 
       setCourts((prev) => prev.filter((c) => c.id !== courtId));
@@ -54,10 +52,11 @@ export default function AdminApprovals() {
     }
   };
 
+  // Reject court
   const handleReject = async (courtId) => {
     try {
       await axiosInstance.put(API_PATH.ADMIN.UPDATE_COURT_STATUS(courtId), {
-        status: "rejected"
+        status: "rejected",
       });
 
       setCourts((prev) => prev.filter((c) => c.id !== courtId));
@@ -68,6 +67,7 @@ export default function AdminApprovals() {
     }
   };
 
+  // Loading State
   if (loading) {
     return (
       <div className="py-20 flex flex-col items-center justify-center">
@@ -78,8 +78,8 @@ export default function AdminApprovals() {
       </div>
     );
   }
->>>>>>> Stashed changes
 
+  // No Pending Courts
   if (courts.length === 0) {
     return (
       <div className="py-20 flex flex-col items-center justify-center">
@@ -93,58 +93,8 @@ export default function AdminApprovals() {
   }
 
   return (
-<<<<<<< Updated upstream
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {courts.map((court) => (
-        <Card key={court.id} className="bg-card border-border overflow-hidden flex flex-col">
-          <div className="relative w-full h-40 bg-muted">
-            <img
-              src={court.image_url || "/placeholder.svg"}
-              alt={court.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-foreground">{court.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 flex-grow">
-            <div className="space-y-2 text-sm">
-              <div>
-                <p className="text-muted-foreground">Location</p>
-                <p className="text-foreground">{court.location}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Owner</p>
-                <p className="text-foreground">{court.owner_name}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Price</p>
-                <p className="text-foreground">${court.hourly_rate}/hour</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Type</p>
-                <p className="text-foreground">{court.type}</p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="gap-2 flex">
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => handleApprove(court.id)}
-            >
-              ✅ Approve
-            </Button>
-            <Button
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => handleReject(court.id)}
-            >
-              ❌ Reject
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
-=======
     <div className="space-y-6">
+      
       {/* Stats Header */}
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100">
         <div className="flex items-center gap-3">
@@ -158,14 +108,14 @@ export default function AdminApprovals() {
         </div>
       </div>
 
-      {/* Court Cards Grid */}
+      {/* Court Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {courts.map((court) => (
           <Card 
             key={court.id} 
             className="bg-white border-2 border-emerald-100 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl group hover:scale-[1.02]"
           >
-            {/* Court Image */}
+            {/* Image */}
             <div className="relative w-full h-48 bg-gradient-to-br from-emerald-100 to-teal-100 overflow-hidden">
               {court.image_url ? (
                 <img
@@ -173,22 +123,20 @@ export default function AdminApprovals() {
                   alt={court.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
                   }}
                 />
               ) : null}
-              
-              {/* Fallback for missing image */}
-              <div 
+
+              <div
                 className="absolute inset-0 flex flex-col items-center justify-center text-emerald-300"
-                style={{ display: court.image_url ? 'none' : 'flex' }}
+                style={{ display: court.image_url ? "none" : "flex" }}
               >
                 <ImageOff className="w-16 h-16 mb-2" />
                 <p className="text-sm font-medium">No Image</p>
               </div>
 
-              {/* Pending Badge Overlay */}
               <div className="absolute top-3 right-3">
                 <Badge className="bg-amber-100 text-amber-700 border-2 border-amber-200 font-semibold px-3 py-1 shadow-lg">
                   <Clock className="w-3 h-3 mr-1" />
@@ -204,6 +152,7 @@ export default function AdminApprovals() {
             </CardHeader>
 
             <CardContent className="pb-4 flex-grow space-y-3">
+              
               {/* Location */}
               <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-emerald-50/50 transition-colors">
                 <div className="bg-emerald-100 p-2 rounded-lg mt-0.5">
@@ -236,6 +185,7 @@ export default function AdminApprovals() {
                   <p className="text-sm text-gray-900 font-medium capitalize">{court.type}</p>
                 </div>
               </div>
+
             </CardContent>
 
             <CardFooter className="gap-3 flex p-4 bg-gradient-to-r from-gray-50 to-emerald-50/30 border-t border-emerald-100">
@@ -246,6 +196,7 @@ export default function AdminApprovals() {
                 <CheckCircle2 className="w-4 h-4 mr-2 group-hover/approve:scale-110 transition-transform" />
                 Approve
               </Button>
+
               <Button
                 className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group/reject"
                 onClick={() => handleReject(court.id)}
@@ -254,10 +205,10 @@ export default function AdminApprovals() {
                 Reject
               </Button>
             </CardFooter>
+
           </Card>
         ))}
       </div>
->>>>>>> Stashed changes
     </div>
   );
 }

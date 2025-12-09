@@ -6,12 +6,10 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from datetime import timedelta
-<<<<<<< Updated upstream
-=======
 from flask_mail import Mail
->>>>>>> Stashed changes
 from dotenv import load_dotenv
 import os
+import stripe
 
 load_dotenv()
 
@@ -38,18 +36,11 @@ class Config:
 flask_app = Flask(__name__)
 flask_app.config.from_object(Config)
 
-<<<<<<< Updated upstream
-# Extensions
-=======
->>>>>>> Stashed changes
 db = SQLAlchemy(flask_app)
 bcrypt = Bcrypt(flask_app)
 migrate = Migrate(flask_app, db)
 jwt = JWTManager(flask_app)
 
-<<<<<<< Updated upstream
-# Swagger
-=======
 # Email Settings
 flask_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 flask_app.config['MAIL_PORT'] = 587
@@ -65,7 +56,6 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 # ---------------------------
 # SWAGGER API
 # ---------------------------
->>>>>>> Stashed changes
 authorizations = {"bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
 api = Api(
@@ -79,13 +69,15 @@ api = Api(
 # ---------------------------
 # CORS
 # ---------------------------
-frontend_origins = os.getenv("FRONTEND_URL")  # split by comma
+frontend_origins = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
 
 CORS(
     flask_app,
     supports_credentials=True,
     origins=frontend_origins,
     allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+
 )
 
 # ---------------------------
@@ -103,21 +95,22 @@ users_ns = Namespace("Users", description="User related operations")
 courts_ns = Namespace("Courts", description="Court related operations")
 matches_ns = Namespace("Matchmaking", description="Matchmaking related operations")
 favs_ns = Namespace("Favorites", description="Favorites related operations")
-<<<<<<< Updated upstream
-bookings_ns= Namespace("Bookings",description="Bookings related operations")
-
-=======
 bookings_ns = Namespace("Bookings", description="Bookings related operations")
 payments_ns = Namespace("Payments", description="Payment related operations")
 admin_ns = Namespace("Admin", description="Admin related operations")
 reviews_ns = Namespace("Reviews", description="Review related operations")
->>>>>>> Stashed changes
+chat_ns = Namespace("chat", description="RAG Chatbot endpoints")
+
 
 api.add_namespace(users_ns, path="/users")
 api.add_namespace(courts_ns, path="/courts")
 api.add_namespace(matches_ns, path="/matchmaking")
 api.add_namespace(favs_ns, path="/favs")
 api.add_namespace(bookings_ns, path="/bookings")
+api.add_namespace(reviews_ns, path="/reviews")
+api.add_namespace(payments_ns, path="/payments")
+api.add_namespace(admin_ns, path="/admin")
+api.add_namespace(chat_ns, path="/chat")
 
 # ---------------------------
 # ROUTES + MODELS
@@ -127,13 +120,11 @@ import app.routes.userRoutes
 import app.routes.courtsRoutes
 import app.routes.matchMakingRoutes
 import app.routes.favoritesRoutes
-<<<<<<< Updated upstream
-import app.routes.bookingRoutes
-=======
 import app.routes.bookingRoutes
 import app.routes.paymentRoutes
 import app.routes.adminRoutes
 import app.routes.ReviewRoutes
+import app.routes.chatRoutes
 
 
 # ---------------------------
@@ -152,4 +143,3 @@ scheduler.start()
 
 import atexit
 atexit.register(lambda: scheduler.shutdown())
->>>>>>> Stashed changes

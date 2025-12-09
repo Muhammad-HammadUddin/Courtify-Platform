@@ -19,9 +19,11 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { Button } from "../components/ui/button";
+import axiosInstance from "../utils/axios";
+import { API_PATH } from "../utils/apiPath";
 
 export default function DashboardLayout() {
-  const [ownerName] = useState("John Smith");
+  const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState("/owner/dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -32,6 +34,20 @@ export default function DashboardLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axiosInstance.get(API_PATH.USER.GET_USER);
+        console.log(response.data)
+        setUserData(response.data.user);
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   const navItems = [
     { id: "courts", label: "My Courts", icon: BarChart3, path: "/owner/dashboard" },
     { id: "add-court", label: "Add Court", icon: PlusCircle, path: "/owner/dashboard/add-court" },
@@ -39,10 +55,9 @@ export default function DashboardLayout() {
   ];
 
   // ⭐ GET ACTIVE ITEM ONCE (no repeated .find())
-  const activeItem = navItems.find(item => item.path === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-linear-to-br from-green-50 via-emerald-50 to-teal-50">
       
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-green-100 shadow-sm">
@@ -50,10 +65,10 @@ export default function DashboardLayout() {
           
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-pointer">
+            <div className="w-10 h-10 bg-linear-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-pointer">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
+            <h1 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
               Courtify
             </h1>
           </div>
@@ -69,7 +84,7 @@ export default function DashboardLayout() {
                   to={item.path}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                     isActive
-                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md scale-105"
+                      ? "bg-linear-to-r from-green-500 to-emerald-600 text-white shadow-md scale-105"
                       : "text-gray-700 hover:bg-green-50 hover:text-green-700"
                   }`}
                 >
@@ -87,26 +102,43 @@ export default function DashboardLayout() {
             <div className="hidden sm:block relative">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="flex items-center gap-2 px-3 py-2 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 rounded-lg transition-all duration-200 bg-white">
-                    <User className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-gray-700">{ownerName}</span>
+                  <Link to="/profile">
+                  <Button className="flex items-center gap-2 px-2 py-1.5 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 rounded-lg transition-all duration-200 bg-white">
+                    {/* Avatar */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-green-300">
+                      <img
+                        src={userData?.img_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.username || 'user'}`}
+                        alt={userData?.username}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    <span className="font-medium text-gray-700 text-sm">{userData?.username || 'Owner'}</span>
                   </Button>
+                  </Link>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent className="w-56 bg-white border border-green-100 rounded-lg shadow-xl overflow-hidden">
-                  <DropdownMenuItem className="flex items-center gap-3 px-4 py-3 hover:bg-green-50">
-                    <User className="w-4 h-4" />
-                    <span className="text-gray-700 text-sm">Profile</span>
-                  </DropdownMenuItem>
+                  {/* User Info Header */}
+                  <div className="px-4 py-3 border-b border-green-100">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {userData?.username || 'Owner'}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {userData?.email || 'No email'}
+                    </p>
+                  </div>
 
-                  <DropdownMenuItem className="flex items-center gap-3 px-4 py-3 hover:bg-green-50">
-                    <span>⚙️</span>
-                    <span className="text-gray-700 text-sm">Settings</span>
-                  </DropdownMenuItem>
+                  <Link to="/profile">
+                    <DropdownMenuItem className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 cursor-pointer">
+                      <User className="w-4 h-4 text-green-600" />
+                      <span className="text-gray-700 text-sm">Edit Profile</span>
+                    </DropdownMenuItem>
+                  </Link>
 
                   <DropdownMenuSeparator className="border-green-100" />
 
-                  <DropdownMenuItem className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50">
+                  <DropdownMenuItem className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 cursor-pointer">
                     <LogOut className="w-4 h-4" />
                     <span className="text-sm">Logout</span>
                   </DropdownMenuItem>
@@ -139,7 +171,7 @@ export default function DashboardLayout() {
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     isActive
-                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
+                      ? "bg-linear-to-r from-green-500 to-emerald-600 text-white shadow-md"
                       : "text-gray-700 hover:bg-green-50"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -150,7 +182,17 @@ export default function DashboardLayout() {
               );
             })}
 
-           
+            {/* Mobile Profile Section */}
+            <div className="border-t border-green-100 mt-2 pt-2">
+              <Link
+                to="/profile"
+                className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-green-50 rounded-lg transition-all"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <User className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium">Edit Profile</span>
+              </Link>
+            </div>
           </div>
         )}
       </nav>

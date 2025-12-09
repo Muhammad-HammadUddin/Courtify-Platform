@@ -1,9 +1,18 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/utils/axios";
+import { API_PATH } from "@/utils/apiPath";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< Updated upstream
-=======
+
 import {
   Dialog,
   DialogContent,
@@ -12,69 +21,65 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+
 import { Calendar, Clock, User, CheckCircle2, XCircle } from "lucide-react";
->>>>>>> Stashed changes
+
+/**
+ * MyBookings (Owner view)
+ * - Fetch bookings for owner's courts
+ * - Approve bookings
+ * - Reject bookings (with reason)
+ * - Nice UI + modal for rejection reason
+ */
 
 export default function MyBookings() {
-  const [bookings, setBookings] = useState([
-    {
-      id: 1,
-      courtName: "Downtown Courts A",
-      userName: "Alex Johnson",
-      date: "2024-11-15",
-      timeSlot: "10:00 AM - 11:00 AM",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      courtName: "Riverside Sports Complex",
-      userName: "Sarah Williams",
-      date: "2024-11-16",
-      timeSlot: "2:00 PM - 3:00 PM",
-      status: "Approved",
-    },
-    {
-      id: 3,
-      courtName: "North Park Facility",
-      userName: "Mike Brown",
-      date: "2024-11-17",
-      timeSlot: "6:00 PM - 7:00 PM",
-      status: "Approved",
-    },
-    {
-      id: 4,
-      courtName: "Downtown Courts A",
-      userName: "Emma Davis",
-      date: "2024-11-18",
-      timeSlot: "9:00 AM - 10:00 AM",
-      status: "Pending",
-    },
-  ]);
+  const [bookings, setBookings] = useState([]);
+  const [rejectReason, setRejectReason] = useState("");
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
 
-  const handleApprove = (id) => {
-    setBookings(
-      bookings.map((b) => (b.id === id ? { ...b, status: "Approved" } : b))
-    );
-    alert("Booking Approved: The booking has been confirmed.");
+  // --------------------------------
+  // 1) GET BOOKINGS FROM BACKEND
+  // --------------------------------
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const res = await axiosInstance.get(API_PATH.BOOKINGS.OWNER_COURT_BOOKINGS, {
+        withCredentials: true,
+      });
+      setBookings(res.data.bookings || []);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCancel = (id) => {
-    setBookings(
-      bookings.map((b) => (b.id === id ? { ...b, status: "Cancelled" } : b))
-    );
-    alert("Booking Cancelled: The booking has been cancelled.");
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  // --------------------------------
+  // 2) APPROVE BOOKING
+  // --------------------------------
+  const handleApprove = async (id) => {
+    try {
+      setProcessingId(id);
+      await axiosInstance.put(API_PATH.BOOKINGS.APPROVE_BOOKING(id), {}, { withCredentials: true });
+
+      // UI Update
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, booking_status: "approved" } : b))
+      );
+    } catch (error) {
+      console.error("Approve Error:", error);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
-<<<<<<< Updated upstream
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Approved":
-        return "bg-green-100 text-green-800";
-      case "Cancelled":
-        return "bg-red-100 text-red-800";
-=======
   // --------------------------------
   // 3) OPEN REJECT MODAL
   // --------------------------------
@@ -88,35 +93,47 @@ export default function MyBookings() {
   // 4) REJECT BOOKING (with reason)
   // --------------------------------
   const handleRejectConfirm = async () => {
-    try {
-      await axiosInstance.put(API_PATH.BOOKINGS.REJECT_BOOKING(selectedBookingId), {
-        cancellation_reason: rejectReason,
-      });
+    if (!rejectReason.trim()) return;
 
-     
+    try {
+      setProcessingId(selectedBookingId);
+      await axiosInstance.put(
+        API_PATH.BOOKINGS.REJECT_BOOKING(selectedBookingId),
+        { cancellation_reason: rejectReason },
+        { withCredentials: true }
+      );
+
+      // UI Update
       setBookings((prev) =>
-        prev.map((b) =>
-          b.id === selectedBookingId ? { ...b, booking_status: "rejected" } : b
-        )
+        prev.map((b) => (b.id === selectedBookingId ? { ...b, booking_status: "rejected" } : b))
       );
 
       setOpenRejectModal(false);
+      setSelectedBookingId(null);
+      setRejectReason("");
     } catch (error) {
-      console.log("Reject Error:", error);
+      console.error("Reject Error:", error);
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  
+  // --------------------------------
+  // 5) Badge color based on status
+  // --------------------------------
   const getStatusColor = (status) => {
+    if (!status) return "bg-gray-100 text-gray-700 border-gray-200";
+
     switch (status.toLowerCase()) {
       case "pending":
         return "bg-amber-100 text-amber-700 border-amber-200";
-      case "confirmed":
+      case "approved":
         return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "confirmed":
+        return "bg-green-100 text-green-700 border-green-200";
       case "cancelled":
       case "rejected":
         return "bg-red-100 text-red-700 border-red-200";
->>>>>>> Stashed changes
       default:
         return "bg-gray-100 text-gray-700 border-gray-200";
     }
@@ -125,8 +142,8 @@ export default function MyBookings() {
   // Stats calculation
   const stats = {
     total: bookings.length,
-    pending: bookings.filter(b => b.booking_status.toLowerCase() === 'pending').length,
-    approved: bookings.filter(b => b.booking_status.toLowerCase() === 'approved').length,
+    pending: bookings.filter((b) => b.booking_status?.toLowerCase() === "pending").length,
+    approved: bookings.filter((b) => b.booking_status?.toLowerCase() === "approved").length,
   };
 
   return (
@@ -184,7 +201,9 @@ export default function MyBookings() {
           </CardHeader>
 
           <CardContent className="p-6">
-            {bookings.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">Loading...</div>
+            ) : bookings.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-gradient-to-br from-emerald-50 to-teal-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-12 h-12 text-emerald-400" />
@@ -207,57 +226,58 @@ export default function MyBookings() {
                   </thead>
 
                   <tbody>
-                    {bookings.map((booking, index) => (
+                    {bookings.map((booking) => (
                       <tr
                         key={booking.id}
                         className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-teal-50/50 transition-all duration-300 group"
                       >
                         <td className="py-5 px-4">
                           <div className="font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">
-                            {booking.court.name}
+                            {booking.court?.name || "-"}
                           </div>
                         </td>
-                        
+
                         <td className="py-5 px-4">
                           <div className="flex items-center gap-2">
                             <div className="bg-gradient-to-br from-emerald-400 to-teal-400 w-8 h-8 rounded-full flex items-center justify-center">
                               <User className="w-4 h-4 text-white" />
                             </div>
-                            <span className="text-gray-700">{booking.user.name}</span>
+                            <span className="text-gray-700">{booking.user?.name || booking.user?.username || "-"}</span>
                           </div>
                         </td>
-                        
+
                         <td className="py-5 px-4">
                           <div className="flex items-center gap-2 text-gray-600">
                             <Calendar className="w-4 h-4 text-emerald-500" />
-                            {booking.booking_date}
+                            {booking.booking_date || booking.date || "-"}
                           </div>
                         </td>
-                        
+
                         <td className="py-5 px-4">
                           <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="w-4 h-4 text-emerald-500" />
-                            {`${booking.start_time} - ${booking.end_time}`}
+                            {`${booking.start_time || booking.time || "-"}${booking.end_time ? ` - ${booking.end_time}` : ""}`}
                           </div>
                         </td>
 
                         <td className="py-5 px-4">
                           <Badge className={`${getStatusColor(booking.booking_status)} border font-medium px-3 py-1`}>
-                            {booking.booking_status.toLowerCase()}
+                            {booking.booking_status ? booking.booking_status.toLowerCase() : "unknown"}
                           </Badge>
                         </td>
 
                         <td className="py-5 px-4">
                           <div className="flex gap-2">
-                            {booking.booking_status.toLowerCase() === "pending" && (
+                            {booking.booking_status?.toLowerCase() === "pending" ? (
                               <>
                                 <Button
                                   size="sm"
                                   className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md hover:shadow-lg transition-all duration-300 border-0"
                                   onClick={() => handleApprove(booking.id)}
+                                  disabled={processingId === booking.id}
                                 >
                                   <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Approve
+                                  {processingId === booking.id ? "Approving..." : "Approve"}
                                 </Button>
 
                                 <Button
@@ -270,12 +290,8 @@ export default function MyBookings() {
                                   Reject
                                 </Button>
                               </>
-                            )}
-
-                            {["approved", "cancelled", "rejected"].includes(booking.booking_status.toLowerCase()) && (
-                              <span className="text-gray-400 text-sm italic px-2">
-                                No action required
-                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-sm italic px-2">No action required</span>
                             )}
                           </div>
                         </td>
@@ -308,9 +324,7 @@ export default function MyBookings() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Reason for rejection *
-                </label>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Reason for rejection *</label>
                 <Textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
@@ -321,107 +335,22 @@ export default function MyBookings() {
             </div>
 
             <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setOpenRejectModal(false)}
-                className="rounded-xl border-gray-200 hover:bg-gray-50"
-              >
+              <Button variant="outline" onClick={() => setOpenRejectModal(false)} className="rounded-xl border-gray-200 hover:bg-gray-50">
                 Cancel
               </Button>
 
               <Button
                 className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
                 onClick={handleRejectConfirm}
-                disabled={!rejectReason.trim()}
+                disabled={!rejectReason.trim() || processingId === selectedBookingId}
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Confirm Rejection
+                {processingId === selectedBookingId ? "Rejecting..." : "Confirm Rejection"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-<<<<<<< Updated upstream
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking List</CardTitle>
-          <CardDescription>Recent bookings for your courts</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Court Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Time Slot</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    className="border-b border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <td className="py-4 px-4 text-foreground">{booking.courtName}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.userName}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.date}</td>
-                    <td className="py-4 px-4 text-foreground">{booking.timeSlot}</td>
-                    <td className="py-4 px-4">
-                      <Badge className={getStatusColor(booking.status)}>
-                        {booking.status}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex gap-2">
-                        {booking.status === "Pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleApprove(booking.id)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCancel(booking.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {booking.status === "Approved" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCancel(booking.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                        {booking.status === "Cancelled" && (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-=======
->>>>>>> Stashed changes
     </div>
   );
 }
