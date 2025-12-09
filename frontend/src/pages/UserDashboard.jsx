@@ -5,7 +5,7 @@ import { Search, Calendar, Heart, Trophy, Sparkles } from "lucide-react";
 import Header from "../components/User/Header.jsx";
 import axiosInstance from "../utils/axios.js";
 
-export default function UserDashboardLayout() {
+export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("/user/dashboard/search");
   const location = useLocation();
 

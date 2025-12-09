@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import ChatWidget from './components/ChatWidget';
 import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
-import UserDashboard from './pages/userDashboard';
+import UserDashboard from './pages/UserDashboard';
 import BookingPage from './pages/BookingPage';
 import OwnerDashboard from './pages/OwnerDashboard';
 import ProfilePage from './pages/ProfilePage';
