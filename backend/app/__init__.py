@@ -69,7 +69,7 @@ api = Api(
 # ---------------------------
 # CORS
 # ---------------------------
-frontend_origins = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+frontend_origins = os.getenv("FRONTEND_URL")
 
 CORS(
     flask_app,

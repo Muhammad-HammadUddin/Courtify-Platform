@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from flask_jwt_extended import jwt_required, get_jwt_identity
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+frontend_url = os.getenv("FRONTEND_URL")
 
 payment_email_template = """
 <!DOCTYPE html>
@@ -102,10 +103,10 @@ class CreateCheckoutSession(Resource):
                     "booking_id": str(booking_id),
                     "user_id": str(user_id)
                 },
-                success_url="http://localhost:5173/success",
-                cancel_url="http://localhost:5173/cancel",
+                success_url=frontend_url+"/success",
+                cancel_url= frontend_url + "/cancel",
                 customer_email=user.email
-                
+            
             )
 
             
