@@ -10,8 +10,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
-    base: '/',
+    base: '/', // Keep '/' if deploying at root domain
     build: {
-        chunkSizeWarningLimit: 2000
-    }
+        outDir: 'dist', // output folder
+        chunkSizeWarningLimit: 2000,
+        rollupOptions: {
+            output: {
+                manualChunks: undefined, // ensures all code is bundled properly
+            },
+        },
+    },
 })
