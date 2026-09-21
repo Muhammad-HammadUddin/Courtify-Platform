@@ -6,6 +6,12 @@
         "config": { "distDir": "dist" }
     }],
     "routes": [
+        {
+            "src": "/(.*)",
+            "has": [{ "type": "host", "value": "courtify-platform.vercel.app" }],
+            "status": 308,
+            "headers": { "Location": "https://courtify.pk/$1" }
+        },
         { "handle": "filesystem" },
         { "src": "/(.*)", "dest": "/index.html" }
     ]
