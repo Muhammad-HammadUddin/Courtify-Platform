@@ -8,7 +8,13 @@
     "routes": [
         {
             "src": "/(.*)",
-            "has": [{ "type": "host", "value": "courtify-platform.vercel.app" }],
+            "has": [{ "type": "host", "value": ".*\\.vercel\\.app" }],
+            "status": 308,
+            "headers": { "Location": "https://courtify.pk/$1" }
+        },
+        {
+            "src": "/(.*)",
+            "has": [{ "type": "host", "value": "www\\.courtify\\.pk" }],
             "status": 308,
             "headers": { "Location": "https://courtify.pk/$1" }
         },
